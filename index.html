@@ -1269,15 +1269,6 @@
                 transform: translateY(0);
             }
         }
-
-        /* Spinner CSS para ProgressiveImageLoader */
-        .img-spinner { pointer-events: none; }
-        .img-spinner .spinner {
-            border: 4px solid rgba(102, 126, 234, 0.3);
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
     </style>
 </head>
 <body>
@@ -1419,12 +1410,9 @@
             IMAGES_FOLDER: './imagenes_descargadas/' // ✅ Ruta corregida
         };
 
-        // ProgressiveImageLoader: carga progresiva y ordenada de imágenes
-        class ProgressiveImageLoader {
-            constructor(maxConcurrent = 4) {
-                this.maxConcurrent = maxConcurrent;
-                this.loadingQueue = [];
-                this.activeLoads = 0;
+        // Sistema de lazy loading optimizado
+        class LazyImageLoader {
+            constructor() {
                 this.observer = new IntersectionObserver(
                     this.handleIntersection.bind(this),
                     { rootMargin: `${CONFIG.IMAGE_LAZY_OFFSET}px` }
@@ -1433,75 +1421,33 @@
             }
 
             handleIntersection(entries) {
-                // Ordenar por posición en el DOM (de arriba hacia abajo)
-                const visible = entries.filter(e => e.isIntersecting);
-                visible.sort((a, b) => a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top);
-                for (const entry of visible) {
-                    this.enqueue(entry.target);
-                }
-            }
-
-            enqueue(img) {
-                if (this.loadedImages.has(img.dataset.src)) return;
-                if (img.dataset.queued) return;
-                img.dataset.queued = '1';
-                this.loadingQueue.push(img);
-                this.processQueue();
-            }
-
-            processQueue() {
-                while (this.activeLoads < this.maxConcurrent && this.loadingQueue.length > 0) {
-                    const img = this.loadingQueue.shift();
-                    this.loadImage(img);
-                }
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        this.loadImage(entry.target);
+                    }
+                });
             }
 
             loadImage(img) {
-                this.activeLoads++;
-                // Mostrar spinner
-                this.showSpinner(img);
-                const tempImg = new window.Image();
+                if (this.loadedImages.has(img.dataset.src)) return;
+                this.loadedImages.add(img.dataset.src);
+
+                const tempImg = new Image();
                 tempImg.onload = () => {
                     img.src = tempImg.src;
                     img.removeAttribute('data-loading');
                     img.style.opacity = '1';
-                    this.loadedImages.add(img.dataset.src);
-                    this.hideSpinner(img);
                     this.observer.unobserve(img);
-                    this.activeLoads--;
-                    setTimeout(() => this.processQueue(), 80); // Espaciar cargas
                 };
                 tempImg.onerror = () => {
-                    this.hideSpinner(img);
                     img.parentElement.innerHTML = '<div style="color: #999; font-size: 0.9rem;">Imagen no disponible</div>';
                     this.observer.unobserve(img);
-                    this.activeLoads--;
-                    setTimeout(() => this.processQueue(), 80);
                 };
                 tempImg.src = img.dataset.src;
             }
 
             observe(img) {
                 this.observer.observe(img);
-            }
-
-            showSpinner(img) {
-                if (img.parentElement && !img.parentElement.querySelector('.img-spinner')) {
-                    const spinner = document.createElement('div');
-                    spinner.className = 'img-spinner';
-                    spinner.style.position = 'absolute';
-                    spinner.style.top = '50%';
-                    spinner.style.left = '50%';
-                    spinner.style.transform = 'translate(-50%, -50%)';
-                    spinner.style.zIndex = '2';
-                    spinner.innerHTML = '<div class="spinner" style="width:32px;height:32px;border-width:3px;"></div>';
-                    img.parentElement.appendChild(spinner);
-                }
-            }
-
-            hideSpinner(img) {
-                const spinner = img.parentElement && img.parentElement.querySelector('.img-spinner');
-                if (spinner) spinner.remove();
             }
         }
 
@@ -1772,29 +1718,31 @@
             }
 
             setupLazyLoading() {
-                // Cargar primero la imagen principal de cada producto/carrusel
+                // Cargar inmediatamente la primera imagen visible de cada producto/carrusel
                 const productCards = this.productsGrid.querySelectorAll('.product-card');
                 productCards.forEach(card => {
-                    // Carrusel: solo la primera imagen visible
+                    // Carrusel
                     const firstCarouselImg = card.querySelector('.carousel-image');
                     if (firstCarouselImg && firstCarouselImg.dataset.src && (!firstCarouselImg.src || firstCarouselImg.src === '' || firstCarouselImg.src.endsWith('placeholder.jpg'))) {
-                        this.lazyLoader.observe(firstCarouselImg);
+                        firstCarouselImg.src = firstCarouselImg.dataset.src;
+                        firstCarouselImg.removeAttribute('data-loading');
+                        firstCarouselImg.style.opacity = '1';
                     }
                     // Imagen simple
                     const firstImg = card.querySelector('.product-image img');
                     if (firstImg && firstImg.dataset.src && (!firstImg.src || firstImg.src === '' || firstImg.src.endsWith('placeholder.jpg'))) {
-                        this.lazyLoader.observe(firstImg);
+                        firstImg.src = firstImg.dataset.src;
+                        firstImg.removeAttribute('data-loading');
+                        firstImg.style.opacity = '1';
                     }
                 });
-                // Después de un pequeño delay, observar thumbnails del carrusel
-                setTimeout(() => {
-                    const thumbs = this.productsGrid.querySelectorAll('.carousel-image');
-                    thumbs.forEach(img => {
-                        if (!img.src || img.src === '' || img.src.endsWith('placeholder.jpg')) {
-                            this.lazyLoader.observe(img);
-                        }
-                    });
-                }, 300);
+                // El resto de imágenes siguen usando lazy loading
+                const images = this.productsGrid.querySelectorAll('img[data-src]');
+                images.forEach(img => {
+                    if (!img.src || img.src === '' || img.src.endsWith('placeholder.jpg')) {
+                        this.lazyLoader.observe(img);
+                    }
+                });
             }
 
             renderNoResults() {
@@ -1968,7 +1916,7 @@
             constructor() {
                 this.state = new AppState();
                 this.jsonLoader = new JSONLoader();
-                this.lazyLoader = new ProgressiveImageLoader(4); // <--- aquí el cambio
+                this.lazyLoader = new LazyImageLoader();
                 this.renderer = new Renderer(this.state, this.lazyLoader);
                 this.searchTimeout = null;
                 this.isInitialized = false;
