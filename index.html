@@ -1406,8 +1406,8 @@
             PRODUCTS_PER_PAGE: 12,
             SEARCH_DEBOUNCE: 300,
             IMAGE_LAZY_OFFSET: 100,
-            EXCEL_FILE: './ArticulosGenerados.xlsx',
-            IMAGES_FOLDER: './imagenes_descargadas/'
+            JSON_FILE: './data/productos.json',
+            IMAGES_FOLDER: './imagenes_descargadas/' // ✅ Ruta corregida
         };
 
         // Sistema de lazy loading optimizado
@@ -1430,9 +1430,8 @@
 
             loadImage(img) {
                 if (this.loadedImages.has(img.dataset.src)) return;
-                
                 this.loadedImages.add(img.dataset.src);
-                
+
                 const tempImg = new Image();
                 tempImg.onload = () => {
                     img.src = tempImg.src;
@@ -1452,32 +1451,18 @@
             }
         }
 
-        // Cargador de Excel
-        class ExcelLoader {
-            constructor() {
-                this.products = [];
-            }
-
+        // Cargador de JSON
+        class JSONLoader {
             async loadProducts() {
                 try {
-                    const response = await fetch(CONFIG.EXCEL_FILE);
+                    const response = await fetch(CONFIG.JSON_FILE);
                     if (!response.ok) {
-                        throw new Error(`Error al cargar el archivo Excel: ${response.statusText}`);
+                        throw new Error(`Error al cargar el archivo JSON: ${response.statusText}`);
                     }
-                    
-                    const arrayBuffer = await response.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                    
-                    // Tomar la primera hoja
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    
-                    // Convertir a JSON
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    return this.processProducts(jsonData);
+                    const data = await response.json();
+                    return this.processProducts(data);
                 } catch (error) {
-                    console.error('Error cargando productos desde Excel:', error);
+                    console.error('Error cargando productos desde JSON:', error);
                     throw error;
                 }
             }
@@ -1490,9 +1475,8 @@
                         const imageNames = row.NombreImg.split(';').map(name => name.trim());
                         images = imageNames.map(name => `${CONFIG.IMAGES_FOLDER}${name}`);
                     }
-
                     return {
-                        id: index + 1,
+                        id: row.id || index + 1,
                         title: row.Titulo || 'Producto sin título',
                         description: row.Descripcion || 'Sin descripción',
                         price: parseFloat(row.Precio) || 0,
@@ -1931,7 +1915,7 @@
         class TiendaApp {
             constructor() {
                 this.state = new AppState();
-                this.excelLoader = new ExcelLoader();
+                this.jsonLoader = new JSONLoader();
                 this.lazyLoader = new LazyImageLoader();
                 this.renderer = new Renderer(this.state, this.lazyLoader);
                 this.searchTimeout = null;
@@ -1942,32 +1926,25 @@
 
             async init() {
                 this.renderer.renderSkeletons();
-                
                 try {
-                    // Cargar productos desde Excel
-                    await this.loadProductsFromExcel();
-                    
+                    await this.loadProductsFromJSON();
                     this.setupEventListeners();
                     this.setupPriceRange();
                     this.isInitialized = true;
-                    
                 } catch (error) {
                     console.error('Error inicializando la aplicación:', error);
                     this.renderer.renderError(error.message);
                 }
             }
 
-            async loadProductsFromExcel() {
+            async loadProductsFromJSON() {
                 try {
-                    const products = await this.excelLoader.loadProducts();
+                    const products = await this.jsonLoader.loadProducts();
                     this.state.updateProducts(products);
                     this.renderer.renderProducts();
-                    
-                    // Actualizar controles de precio basado en los datos reales
                     this.renderer.updatePriceRangeUI(this.state.maxPrice);
-                    
                 } catch (error) {
-                    throw new Error(`No se pudo cargar el archivo Excel. Asegúrate de que "ArticulosGenerados.xlsx" esté en la misma carpeta que este archivo HTML.`);
+                    throw new Error(`No se pudo cargar el archivo productos.json. Asegúrate de que esté en la carpeta /data.`);
                 }
             }
 
@@ -2268,7 +2245,6 @@
 
         // Inicializar la aplicación
         let app;
-
         document.addEventListener('DOMContentLoaded', async () => {
             app = new TiendaApp();
             await app.init();
