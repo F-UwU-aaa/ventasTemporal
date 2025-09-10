@@ -1468,9 +1468,6 @@
                 <div class="modal-details">
                     <div class="modal-price" id="modalPrice"></div>
                     <div class="modal-description" id="modalDescription"></div>
-                    <div class="modal-actions">
-                        <button class="add-to-cart" id="modalAddToCart">Agregar al Carrito</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1749,11 +1746,13 @@
                     <div class="product-info">
                         <div class="product-details">
                             <h3 class="product-title">${product.title}</h3>
+                            <p class="product-description">${product.description}</p>
                         </div>
                         <div class="product-footer">
                             <div class="product-price">${product.price} Bs</div>
                             <div class="product-actions">
-                                <button class="view-product" onclick="app.openProductModal(${product.id})">Ver</button>
+                                <button class="view-product" data-id="${product.id}">Ver</button>
+                                <button class="add-to-cart" data-id="${product.id}">Agregar</button>
                             </div>
                         </div>
                     </div>
@@ -1879,7 +1878,7 @@
                             <p style="opacity: 0.7; margin-top: 0.5rem;">Agrega algunos productos para comenzar</p>
                         </div>
                     `;
-                    this.totalAmount.textContent = '0';
+                    this.totalAmount.textContent = '0 Bs';
                     return;
                 }
 
@@ -1892,13 +1891,11 @@
                             <div class="cart-item-title">${item.title}</div>
                             <div class="cart-item-price">${item.price} Bs</div>
                             <div class="cart-quantity">
-                                <button class="qty-btn" onclick="app.updateCartQuantity(${item.id}, -1)">-</button>
+                                <button class="qty-btn qty-decrease" data-id="${item.id}">-</button>
                                 <span style="min-width: 30px; text-align: center; font-weight: 600;">${item.quantity}</span>
-                                <button class="qty-btn" onclick="app.updateCartQuantity(${item.id}, 1)">+</button>
-                                <button onclick="app.removeFromCart(${item.id})" 
-                                        style="margin-left: 1rem; color: #ff4757; background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 50%; transition: all 0.3s ease;"
-                                        onmouseover="this.style.background='rgba(255, 71, 87, 0.1)'"
-                                        onmouseout="this.style.background='none'">
+                                <button class="qty-btn qty-increase" data-id="${item.id}">+</button>
+                                <button class="remove-item" data-id="${item.id}" 
+                                        style="margin-left: 1rem; color: #ff4757; background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 50%; transition: all 0.3s ease;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                                 </button>
@@ -1908,21 +1905,21 @@
                 `).join('');
 
                 this.cartItems.innerHTML = cartHTML;
-                this.totalAmount.textContent = this.state.getCartTotal().toFixed(2);
+                this.totalAmount.textContent = this.state.getCartTotal().toFixed(2) + ' Bs';
             }
 
             showAddToCartFeedback(button) {
                 const originalHTML = button.innerHTML;
                 const originalBackground = button.style.background;
-                
+
                 button.innerHTML = '<span style="color: white;">✓ Agregado</span>';
                 button.style.background = 'linear-gradient(135deg, #2ed573 0%, #1e8449 100%)';
                 button.disabled = true;
                 button.classList.add('success');
-                
+
                 // Mostrar mensaje de retroalimentación
                 this.showFeedbackMessage('Producto agregado al carrito');
-                
+
                 setTimeout(() => {
                     button.innerHTML = originalHTML;
                     button.style.background = originalBackground;
@@ -1935,7 +1932,7 @@
                 const feedbackEl = document.getElementById('feedbackMessage');
                 feedbackEl.textContent = message;
                 feedbackEl.classList.add('show');
-                
+
                 setTimeout(() => {
                     feedbackEl.classList.remove('show');
                 }, 3000);
@@ -1945,12 +1942,13 @@
                 // Actualizar los controles de precio
                 const priceMin = document.getElementById('priceMin');
                 const priceMax = document.getElementById('priceMax');
-                
-                priceMin.max = maxPrice;
-                priceMax.max = maxPrice;
-                priceMax.value = maxPrice;
-                
-                document.getElementById('maxPriceLabel').textContent = `${maxPrice} Bs`;
+
+                if (typeof maxPrice !== 'undefined') {
+                    priceMin.max = maxPrice;
+                    priceMax.max = maxPrice;
+                    priceMax.value = maxPrice;
+                    document.getElementById('maxPriceLabel').textContent = `${maxPrice} Bs`;
+                }
             }
         }
 
@@ -2006,12 +2004,13 @@
                     this.handleSort(e.target.value);
                 });
 
-                document.getElementById('priceMin').addEventListener('input', () => {
-                    this.handlePriceChange();
+                // Pasar el event al handler de precio (corrección: antes usaba 'event' implícito)
+                document.getElementById('priceMin').addEventListener('input', (e) => {
+                    this.handlePriceChange(e);
                 });
 
-                document.getElementById('priceMax').addEventListener('input', () => {
-                    this.handlePriceChange();
+                document.getElementById('priceMax').addEventListener('input', (e) => {
+                    this.handlePriceChange(e);
                 });
 
                 // Vista
@@ -2041,7 +2040,7 @@
                     if (e.target.id === 'productModal') this.closeProductModal();
                 });
 
-                // <-- ADICIÓN: listener para el botón de cerrar del modal de producto -->
+                // Listener para el botón de cerrar del modal de producto
                 const closeModalBtn = document.getElementById('closeModal');
                 if (closeModalBtn) {
                     closeModalBtn.addEventListener('click', (e) => {
@@ -2049,7 +2048,6 @@
                         this.closeProductModal();
                     });
                 }
-                // <-- FIN ADICIÓN -->
 
                 // Atajos de teclado
                 document.addEventListener('keydown', (e) => {
@@ -2063,7 +2061,7 @@
                     }
                 });
 
-                // **AGREGADO: detectar botón "Atrás" del navegador y cerrar modales**
+                // detectar botón "Atrás" del navegador y cerrar modales
                 window.addEventListener('popstate', () => {
                     const productModal = document.getElementById('productModal');
                     const cartModal = document.getElementById('cartModal');
@@ -2072,6 +2070,44 @@
                         app.closeProductModal();
                     } else if (cartModal && cartModal.style.display === 'block') {
                         app.closeCart();
+                    }
+                });
+
+                // Delegación de eventos en productsGrid (view / add-to-cart)
+                this.renderer.productsGrid.addEventListener('click', (e) => {
+                    const viewBtn = e.target.closest('.view-product');
+                    if (viewBtn) {
+                        const id = parseInt(viewBtn.dataset.id);
+                        if (!isNaN(id)) this.openProductModal(id);
+                        return;
+                    }
+                    const addBtn = e.target.closest('.add-to-cart');
+                    if (addBtn) {
+                        const id = parseInt(addBtn.dataset.id);
+                        if (!isNaN(id)) this.addToCart(id, e);
+                        return;
+                    }
+                });
+
+                // Delegación de eventos en cartItems (qty + / - / remove)
+                this.renderer.cartItems.addEventListener('click', (e) => {
+                    const decrease = e.target.closest('.qty-decrease');
+                    if (decrease) {
+                        const id = parseInt(decrease.dataset.id);
+                        if (!isNaN(id)) this.updateCartQuantity(id, -1);
+                        return;
+                    }
+                    const increase = e.target.closest('.qty-increase');
+                    if (increase) {
+                        const id = parseInt(increase.dataset.id);
+                        if (!isNaN(id)) this.updateCartQuantity(id, 1);
+                        return;
+                    }
+                    const remove = e.target.closest('.remove-item');
+                    if (remove) {
+                        const id = parseInt(remove.dataset.id);
+                        if (!isNaN(id)) this.removeFromCart(id);
+                        return;
                     }
                 });
             }
@@ -2089,7 +2125,8 @@
                 this.renderer.renderProducts();
             }
 
-            handlePriceChange() {
+            // Ahora recibe el event para poder determinar qué control disparó el cambio
+            handlePriceChange(event) {
                 const minVal = parseInt(document.getElementById('priceMin').value);
                 const maxVal = parseInt(document.getElementById('priceMax').value);
                 
@@ -2097,8 +2134,9 @@
                 let adjustedMin = minVal;
                 let adjustedMax = maxVal;
                 
+                // Evitar usar 'event' implícito; usar el pasado
                 if (adjustedMin >= adjustedMax) {
-                    if (event.target.id === 'priceMin') {
+                    if (event && event.target && event.target.id === 'priceMin') {
                         adjustedMax = adjustedMin + 10;
                         document.getElementById('priceMax').value = adjustedMax;
                     } else {
@@ -2106,7 +2144,7 @@
                         document.getElementById('priceMin').value = adjustedMin;
                     }
                 }
-                
+
                 this.state.priceRange = { min: adjustedMin, max: adjustedMax };
                 this.updatePriceRangeUI();
                 this.state.currentPage = 1;
@@ -2121,22 +2159,22 @@
             updatePriceRangeUI() {
                 const minPercent = (this.state.priceRange.min / this.state.maxPrice) * 100;
                 const maxPercent = (this.state.priceRange.max / this.state.maxPrice) * 100;
-                
+
                 const rangeFill = document.getElementById('rangeFill');
                 rangeFill.style.left = minPercent + '%';
                 rangeFill.style.width = (maxPercent - minPercent) + '%';
-                
+
                 document.getElementById('minPriceLabel').textContent = `${this.state.priceRange.min} Bs`;
                 document.getElementById('maxPriceLabel').textContent = `${this.state.priceRange.max} Bs`;
             }
 
             toggleView(view) {
                 this.state.currentView = view;
-                
+
                 const gridBtn = document.getElementById('gridViewBtn');
                 const listBtn = document.getElementById('listViewBtn');
                 const productsGrid = document.getElementById('productsGrid');
-                
+
                 if (view === 'grid') {
                     gridBtn.classList.add('active');
                     listBtn.classList.remove('active');
@@ -2161,6 +2199,7 @@
                 });
             }
 
+            // addToCart acepta source (Event o Element). Si se pasa Event, se extrae el botón.
             addToCart(productId, source = null) {
                 // Añade al carrito en el estado
                 this.state.addToCart(productId);
@@ -2201,25 +2240,19 @@
                 document.body.style.overflow = 'hidden';
                 this.renderer.renderCart();
                 
-                // **AGREGAR ESTADO AL HISTORIAL para capturar "Atrás" sin cambiar URL visible**
                 try {
                     history.pushState({ cartOpen: true }, '', window.location.href);
                 } catch (err) {
-                    // no crítico; si falla (por CSP u otro), el modal sigue funcionando
                     console.warn('pushState falló para carrito:', err);
                 }
             }
 
             closeCart() {
-                // **AGREGAR ESTA VERIFICACIÓN:**
-                // Si el historial tiene el estado cartOpen, retroceder en historial y salir
                 if (history.state && history.state.cartOpen) {
-                    // Esto desencadenará 'popstate' y cerrará el carrito sin cambiar la URL visible
                     history.back();
                     return;
                 }
 
-                // Ocultar modal y restaurar scroll del body
                 document.getElementById('cartModal').style.display = 'none';
                 document.body.style.overflow = 'auto';
             }
@@ -2411,7 +2444,7 @@
                         dot.className = 'dot' + (idx === this.productModalIndex ? ' active' : '');
                         dot.onclick = (e) => {
                             e.stopPropagation();
-                            this.showImage(productId, idx, e);
+                            this.showImage(product.id, idx, e);
                         };
                         modalDots.appendChild(dot);
                     });
@@ -2499,7 +2532,6 @@
         // Mejoras de performance
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Registro del service worker si está disponible (para cache)
                 console.log('Service Worker support detected');
             });
         }
