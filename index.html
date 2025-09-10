@@ -939,24 +939,24 @@
 
         .modal-body {
             display: flex;
+            flex-direction: column !important;
             gap: 3rem;
             padding: 2.5rem;
         }
 
         .modal-images {
             flex: 1;
-            max-width: 450px;
+            width: 100%;
         }
 
         .modal-main-image {
             width: 100%;
             height: 350px;
             object-fit: contain;
+            background: rgba(255,255,255,0.7);
             border-radius: 15px;
-            background: white;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
 
         .modal-thumbnails {
@@ -1137,13 +1137,13 @@
             }
 
             .modal-body {
-                flex-direction: column;
+                flex-direction: column !important;
                 gap: 2rem;
                 padding: 2rem;
             }
 
             .modal-images {
-                max-width: 100%;
+                width: 100%;
             }
 
             .modal-main-image {
@@ -1269,6 +1269,76 @@
                 transform: translateY(0);
             }
         }
+
+        /* Carrusel del modal */
+        .modal-carousel {
+            position: relative;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102,126,234,0.10);
+            margin-bottom: 1.2rem;
+        }
+        /* Imagen principal del carrusel */
+        .modal-main-image {
+            width: 100%;
+            height: 350px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.7);
+            border-radius: 15px;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        /* Flechas overlay */
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(102,126,234,0.7);
+            color: #fff;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.15);
+            transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+            opacity: 0.95;
+        }
+        .carousel-btn:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(1.08) translateY(-50%);
+        }
+        /* Dots/bolitas */
+        .carousel-dots {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 2;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            border: 2px solid #667eea;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .dot.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(1.2);
+            border-color: #764ba2;
+        }
     </style>
 </head>
 <body>
@@ -1380,8 +1450,18 @@
             </div>
             <div class="modal-body">
                 <div class="modal-images">
-                    <div class="modal-carousel">
+                    <div class="modal-carousel glassmorphism" id="modalCarousel" style="position:relative;">
                         <img id="modalMainImage" class="modal-main-image" src="" alt="">
+                        <!-- Flecha anterior -->
+                        <button id="modalPrevBtn" class="carousel-btn" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);display:none;z-index:2;">
+                            &#10094;
+                        </button>
+                        <!-- Flecha siguiente -->
+                        <button id="modalNextBtn" class="carousel-btn" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:none;z-index:2;">
+                            &#10095;
+                        </button>
+                        <!-- Dots/bolitas -->
+                        <div class="carousel-dots" id="modalCarouselDots" style="display:none;"></div>
                     </div>
                     <div class="modal-thumbnails" id="modalThumbnails"></div>
                 </div>
@@ -1655,61 +1735,25 @@
             createProductElement(product) {
                 const div = document.createElement('div');
                 div.className = 'product-card';
-                
-                // Carrusel de imágenes si hay más de una imagen
-                let imageHTML = '';
-                if (product.images.length > 1) {
-                    imageHTML = `
-                        <div class="product-image-carousel" data-product-id="${product.id}">
-                            <div class="carousel-container">
-                                ${product.images.map((img, idx) => `
-                                    <img data-src="${img}"
-                                         alt="${product.title}"
-                                         data-loading="true"
-                                         style="opacity: 0; display: ${idx === 0 ? 'block' : 'none'};"
-                                         class="carousel-image">
-                                `).join('')}
-                            </div>
-                            <div class="carousel-controls">
-                                <button class="carousel-btn prev" onclick="app.prevImage(${product.id}, event)">‹</button>
-                                <button class="carousel-btn next" onclick="app.nextImage(${product.id}, event)">›</button>
-                            </div>
-                            <div class="carousel-dots">
-                                ${product.images.map((_, idx) => `
-                                    <span class="dot ${idx === 0 ? 'active' : ''}"
-                                          onclick="app.showImage(${product.id}, ${idx}, event)"></span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    imageHTML = `
-                        <div class="product-image">
-                            <img data-src="${product.mainImage}"
-                                 alt="${product.title}"
-                                 data-loading="true"
-                                 style="opacity: 0;">
-                        </div>
-                    `;
-                }
-
+                // Solo imagen principal, sin carrusel ni controles
+                const imageHTML = `
+                    <div class="product-image">
+                        <img data-src="${product.mainImage}"
+                             alt="${product.title}"
+                             data-loading="true"
+                             style="opacity: 0;">
+                    </div>
+                `;
                 div.innerHTML = `
                     ${imageHTML}
                     <div class="product-info">
                         <div class="product-details">
                             <h3 class="product-title">${product.title}</h3>
-                            <p class="product-description">${product.description}</p>
                         </div>
                         <div class="product-footer">
                             <div class="product-price">${product.price} Bs</div>
                             <div class="product-actions">
                                 <button class="view-product" onclick="app.openProductModal(${product.id})">Ver</button>
-                                <button class="add-to-cart" onclick="app.addToCart(${product.id})">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                                    </svg>
-                                    Agregar
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1857,7 +1901,6 @@
                                         onmouseout="this.style.background='none'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -1998,6 +2041,16 @@
                     if (e.target.id === 'productModal') this.closeProductModal();
                 });
 
+                // <-- ADICIÓN: listener para el botón de cerrar del modal de producto -->
+                const closeModalBtn = document.getElementById('closeModal');
+                if (closeModalBtn) {
+                    closeModalBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.closeProductModal();
+                    });
+                }
+                // <-- FIN ADICIÓN -->
+
                 // Atajos de teclado
                 document.addEventListener('keydown', (e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -2096,14 +2149,26 @@
                 });
             }
 
-            addToCart(productId) {
+            addToCart(productId, source = null) {
+                // Añade al carrito en el estado
                 this.state.addToCart(productId);
                 this.renderer.updateCartUI();
                 
-                // Feedback visual
-                const button = event.target.closest('.add-to-cart');
-                if (button) {
-                    this.renderer.showAddToCartFeedback(button);
+                // Determinar el botón para feedback: puede ser un Event, un Element o null
+                let buttonEl = null;
+                if (source instanceof Event) {
+                    buttonEl = source.target && source.target.closest ? source.target.closest('.add-to-cart') : null;
+                } else if (source instanceof Element) {
+                    buttonEl = source.closest && source.closest('.add-to-cart') ? source.closest('.add-to-cart') : source;
+                }
+
+                // Si no se pasa botón, intentar buscar uno visible en el modal
+                if (!buttonEl) {
+                    buttonEl = document.getElementById('modalAddToCart') || document.querySelector('.add-to-cart');
+                }
+
+                if (buttonEl) {
+                    this.renderer.showAddToCartFeedback(buttonEl);
                 }
             }
 
@@ -2192,20 +2257,112 @@
                 this.productModalIndex = 0;
                 this.productModalImages = product.images.length ? product.images : [product.mainImage];
                 this.renderProductModal(product);
-                
-                document.getElementById('productModal').style.display = 'block';
+
+                const modal = document.getElementById('productModal');
+                const modalContent = modal.querySelector('.modal-content');
+
+                // Mostrar modal y bloquear scroll del body
+                modal.style.display = 'block';
                 document.body.style.overflow = 'hidden';
-                
-                document.getElementById('closeModal').onclick = () => this.closeProductModal();
-                document.getElementById('modalAddToCart').onclick = () => {
-                    this.addToCart(product.id);
-                    this.renderer.showFeedbackMessage('Producto agregado al carrito desde el modal');
+
+                // Mostrar/ocultar flechas y dots según cantidad de imágenes
+                const prevBtn = document.getElementById('modalPrevBtn');
+                const nextBtn = document.getElementById('modalNextBtn');
+                const dots = document.getElementById('modalCarouselDots');
+                if (this.productModalImages.length > 1) {
+                    prevBtn.style.display = 'flex';
+                    nextBtn.style.display = 'flex';
+                    dots.style.display = 'flex';
+                } else {
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                    dots.style.display = 'none';
+                }
+                prevBtn.onclick = (e) => { e.stopPropagation(); this.prevModalImage(); };
+                nextBtn.onclick = (e) => { e.stopPropagation(); this.nextModalImage(); };
+                // Dots click
+                dots.innerHTML = this.productModalImages.map((_, idx) => `<span class="dot${idx===this.productModalIndex?' active':''}" data-idx="${idx}"></span>`).join('');
+                dots.querySelectorAll('.dot').forEach(dot => {
+                    dot.onclick = (e) => { e.stopPropagation(); this.showModalImage(parseInt(dot.dataset.idx)); };
+                });
+
+                // <-- ADICIÓN: evitar que el wheel/touch propaguen al body cuando el contenido está en tope/inferior -->
+                // Guardar handlers para removerlos al cerrar
+                if (!this._modalWheelHandler) {
+                    this._modalWheelHandler = (e) => {
+                        // deltaY positivo -> scroll hacia abajo, negativo -> hacia arriba
+                        const delta = e.deltaY;
+                        const scrollTop = modalContent.scrollTop;
+                        const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
+
+                        // Si estamos en el tope y scrolleando hacia arriba, o en el final y scrolleando hacia abajo -> prevenir
+                        if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
+                            e.preventDefault();
+                        }
+                    };
+                }
+
+                if (!this._touchStartY) this._touchStartY = 0;
+
+                this._modalTouchStartHandler = (e) => {
+                    this._touchStartY = e.touches ? e.touches[0].clientY : 0;
                 };
+
+                this._modalTouchMoveHandler = (e) => {
+                    const currentY = e.touches ? e.touches[0].clientY : 0;
+                    const delta = this._touchStartY - currentY; // >0 swipe up, <0 swipe down
+                    const scrollTop = modalContent.scrollTop;
+                    const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
+
+                    if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
+                        e.preventDefault();
+                    }
+                };
+
+                // Añadir listeners con passive:false para permitir preventDefault
+                modal.addEventListener('wheel', this._modalWheelHandler, { passive: false });
+                modal.addEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                modal.addEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                // <-- FIN ADICIÓN -->
+
+                // <-- ADICIÓN: click handler para el botón "Agregar al Carrito" del modal -->
+                const modalAddBtn = document.getElementById('modalAddToCart');
+                if (modalAddBtn) {
+                    // Remover handler previo por si acaso
+                    modalAddBtn.onclick = null;
+                    modalAddBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Pasamos el elemento botón para que showAddToCartFeedback lo utilice
+                        this.addToCart(productId, modalAddBtn);
+                    });
+                }
+                // <-- FIN ADICIÓN -->
             }
 
             closeProductModal() {
-                document.getElementById('productModal').style.display = 'none';
+                const modal = document.getElementById('productModal');
+                const modalContent = modal.querySelector('.modal-content');
+
+                // Ocultar modal y restaurar scroll del body
+                modal.style.display = 'none';
                 document.body.style.overflow = 'auto';
+
+                // Remover listeners añadidos al abrir para evitar fugas de memoria
+                if (this._modalWheelHandler) {
+                    modal.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
+                }
+                if (this._modalTouchStartHandler) {
+                    modal.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                }
+                if (this._modalTouchMoveHandler) {
+                    modal.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                }
+
+                // Limpiar referencias
+                this._modalWheelHandler = null;
+                this._modalTouchStartHandler = null;
+                this._modalTouchMoveHandler = null;
+                this._touchStartY = 0;
             }
 
             renderProductModal(product) {
@@ -2228,6 +2385,33 @@
                 } else {
                     thumbsContainer.style.display = 'none';
                 }
+
+                // Mostrar/ocultar flechas y dots
+                const modalPrevBtn = document.getElementById('modalPrevBtn');
+                const modalNextBtn = document.getElementById('modalNextBtn');
+                const modalDots = document.getElementById('modalCarouselDots');
+
+                if (this.productModalImages.length > 1) {
+                    modalPrevBtn.style.display = 'block';
+                    modalNextBtn.style.display = 'block';
+                    modalDots.style.display = 'flex';
+
+                    // Dots
+                    modalDots.innerHTML = '';
+                    this.productModalImages.forEach((_, idx) => {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot' + (idx === this.productModalIndex ? ' active' : '');
+                        dot.onclick = (e) => {
+                            e.stopPropagation();
+                            this.showImage(productId, idx, e);
+                        };
+                        modalDots.appendChild(dot);
+                    });
+                } else {
+                    modalPrevBtn.style.display = 'none';
+                    modalNextBtn.style.display = 'none';
+                    modalDots.style.display = 'none';
+                }
             }
 
             setModalImage(idx) {
@@ -2240,6 +2424,50 @@
                 thumbs.forEach((thumb, i) => {
                     thumb.classList.toggle('active', i === idx);
                 });
+
+                // Actualizar dots
+                const dots = document.querySelectorAll('#modalCarouselDots .dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === idx);
+                });
+            }
+
+            // Cambiar imagen anterior
+            prevModalImage() {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = (this.productModalIndex - 1 + this.productModalImages.length) % this.productModalImages.length;
+                this.updateModalCarousel();
+            }
+
+            // Cambiar imagen siguiente
+            nextModalImage() {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = (this.productModalIndex + 1) % this.productModalImages.length;
+                this.updateModalCarousel();
+            }
+
+            // Mostrar imagen por índice (al hacer click en un dot)
+            showModalImage(idx) {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = idx;
+                this.updateModalCarousel();
+            }
+
+            // Actualiza la imagen y los dots activos
+            updateModalCarousel() {
+                const mainImg = document.getElementById('modalMainImage');
+                mainImg.style.opacity = 0.5;
+                setTimeout(() => {
+                    mainImg.src = this.productModalImages[this.productModalIndex];
+                    mainImg.style.opacity = 1;
+                }, 120);
+                // Actualizar dots
+                const dots = document.getElementById('modalCarouselDots');
+                if (dots) {
+                    dots.querySelectorAll('.dot').forEach((dot, i) => {
+                        dot.classList.toggle('active', i === this.productModalIndex);
+                    });
+                }
             }
         }
 
