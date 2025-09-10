@@ -2287,15 +2287,19 @@
                 });
 
                 // <-- ADICIÓN: evitar que el wheel/touch propaguen al body cuando el contenido está en tope/inferior -->
-                // Guardar handlers para removerlos al cerrar
+                // Ahora los listeners se añaden sobre modalContent y se permiten excepciones
                 if (!this._modalWheelHandler) {
                     this._modalWheelHandler = (e) => {
-                        // deltaY positivo -> scroll hacia abajo, negativo -> hacia arriba
+                        // Si el evento ocurre dentro de las thumbnails o del carrusel, permitir scroll allí
+                        if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
+                            return; // dejar que el contenedor maneje el scroll (p.ej. scroll horizontal de thumbnails)
+                        }
+
                         const delta = e.deltaY;
                         const scrollTop = modalContent.scrollTop;
                         const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
 
-                        // Si estamos en el tope y scrolleando hacia arriba, o en el final y scrolleando hacia abajo -> prevenir
+                        // Si estamos en el tope y scrolleando hacia arriba, o en el final y scrolleando hacia abajo -> prevenir propagación al body
                         if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
                             e.preventDefault();
                         }
@@ -2305,10 +2309,19 @@
                 if (!this._touchStartY) this._touchStartY = 0;
 
                 this._modalTouchStartHandler = (e) => {
+                    // Si el touch empieza dentro de thumbnails permitir interacción normal
+                    if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
+                        this._touchInsideThumbnails = true;
+                    } else {
+                        this._touchInsideThumbnails = false;
+                    }
                     this._touchStartY = e.touches ? e.touches[0].clientY : 0;
                 };
 
                 this._modalTouchMoveHandler = (e) => {
+                    // Si el touch se hace sobre thumbnails, permitir (no prevenirDefault)
+                    if (this._touchInsideThumbnails) return;
+
                     const currentY = e.touches ? e.touches[0].clientY : 0;
                     const delta = this._touchStartY - currentY; // >0 swipe up, <0 swipe down
                     const scrollTop = modalContent.scrollTop;
@@ -2320,9 +2333,10 @@
                 };
 
                 // Añadir listeners con passive:false para permitir preventDefault
-                modal.addEventListener('wheel', this._modalWheelHandler, { passive: false });
-                modal.addEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
-                modal.addEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                // Se añaden sobre modalContent (no sobre modal) para no bloquear elementos internos como thumbnails
+                modalContent.addEventListener('wheel', this._modalWheelHandler, { passive: false });
+                modalContent.addEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                modalContent.addEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
                 // <-- FIN ADICIÓN -->
 
                 // <-- ADICIÓN: click handler para el botón "Agregar al Carrito" del modal -->
@@ -2349,13 +2363,13 @@
 
                 // Remover listeners añadidos al abrir para evitar fugas de memoria
                 if (this._modalWheelHandler) {
-                    modal.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
+                    modalContent.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
                 }
                 if (this._modalTouchStartHandler) {
-                    modal.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                    modalContent.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
                 }
                 if (this._modalTouchMoveHandler) {
-                    modal.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                    modalContent.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
                 }
 
                 // Limpiar referencias
@@ -2363,6 +2377,7 @@
                 this._modalTouchStartHandler = null;
                 this._modalTouchMoveHandler = null;
                 this._touchStartY = 0;
+                this._touchInsideThumbnails = false;
             }
 
             renderProductModal(product) {
