@@ -1973,6 +1973,7 @@
                     await this.loadProductsFromJSON();
                     this.setupEventListeners();
                     this.setupPriceRange();
+                    this.setupModalHistoryHandler(); // ← AGREGADO
                     this.isInitialized = true;
                 } catch (error) {
                     console.error('Error inicializando la aplicación:', error);
@@ -2256,6 +2257,14 @@
                 
                 this.productModalIndex = 0;
                 this.productModalImages = product.images.length ? product.images : [product.mainImage];
+                
+                // ✅ NUEVO: Agregar entrada al historial para manejar botón "Atrás"
+                try {
+                    history.pushState({ modal: 'product', productId: productId }, '', window.location.href);
+                } catch (err) {
+                    console.warn('pushState no disponible:', err);
+                }
+                
                 this.renderProductModal(product);
 
                 const modal = document.getElementById('productModal');
@@ -2286,20 +2295,17 @@
                     dot.onclick = (e) => { e.stopPropagation(); this.showModalImage(parseInt(dot.dataset.idx)); };
                 });
 
-                // <-- ADICIÓN: evitar que el wheel/touch propaguen al body cuando el contenido está en tope/inferior -->
-                // Ahora los listeners se añaden sobre modalContent y se permiten excepciones
+                // Existing wheel/touch handlers (mantener el código existente)
                 if (!this._modalWheelHandler) {
                     this._modalWheelHandler = (e) => {
-                        // Si el evento ocurre dentro de las thumbnails o del carrusel, permitir scroll allí
                         if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
-                            return; // dejar que el contenedor maneje el scroll (p.ej. scroll horizontal de thumbnails)
+                            return;
                         }
 
                         const delta = e.deltaY;
                         const scrollTop = modalContent.scrollTop;
                         const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
 
-                        // Si estamos en el tope y scrolleando hacia arriba, o en el final y scrolleando hacia abajo -> prevenir propagación al body
                         if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
                             e.preventDefault();
                         }
@@ -2309,7 +2315,6 @@
                 if (!this._touchStartY) this._touchStartY = 0;
 
                 this._modalTouchStartHandler = (e) => {
-                    // Si el touch empieza dentro de thumbnails permitir interacción normal
                     if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
                         this._touchInsideThumbnails = true;
                     } else {
@@ -2319,11 +2324,10 @@
                 };
 
                 this._modalTouchMoveHandler = (e) => {
-                    // Si el touch se hace sobre thumbnails, permitir (no prevenirDefault)
                     if (this._touchInsideThumbnails) return;
 
                     const currentY = e.touches ? e.touches[0].clientY : 0;
-                    const delta = this._touchStartY - currentY; // >0 swipe up, <0 swipe down
+                    const delta = this._touchStartY - currentY;
                     const scrollTop = modalContent.scrollTop;
                     const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
 
@@ -2332,36 +2336,39 @@
                     }
                 };
 
-                // Añadir listeners con passive:false para permitir preventDefault
-                // Se añaden sobre modalContent (no sobre modal) para no bloquear elementos internos como thumbnails
                 modalContent.addEventListener('wheel', this._modalWheelHandler, { passive: false });
                 modalContent.addEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
                 modalContent.addEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
-                // <-- FIN ADICIÓN -->
 
-                // <-- ADICIÓN: click handler para el botón "Agregar al Carrito" del modal -->
+                // Modal add to cart button
                 const modalAddBtn = document.getElementById('modalAddToCart');
                 if (modalAddBtn) {
-                    // Remover handler previo por si acaso
                     modalAddBtn.onclick = null;
                     modalAddBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        // Pasamos el elemento botón para que showAddToCartFeedback lo utilice
                         this.addToCart(productId, modalAddBtn);
                     });
                 }
-                // <-- FIN ADICIÓN -->
             }
 
             closeProductModal() {
                 const modal = document.getElementById('productModal');
                 const modalContent = modal.querySelector('.modal-content');
 
+                // ✅ NUEVO: Solo ir atrás en historial si el modal está abierto
+                if (modal.style.display === 'block') {
+                    try {
+                        history.back();
+                    } catch (err) {
+                        console.warn('history.back falló:', err);
+                    }
+                }
+
                 // Ocultar modal y restaurar scroll del body
                 modal.style.display = 'none';
                 document.body.style.overflow = 'auto';
 
-                // Remover listeners añadidos al abrir para evitar fugas de memoria
+                // Remover listeners existentes
                 if (this._modalWheelHandler) {
                     modalContent.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
                 }
@@ -2372,7 +2379,6 @@
                     modalContent.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
                 }
 
-                // Limpiar referencias
                 this._modalWheelHandler = null;
                 this._modalTouchStartHandler = null;
                 this._modalTouchMoveHandler = null;
@@ -2380,109 +2386,52 @@
                 this._touchInsideThumbnails = false;
             }
 
-            renderProductModal(product) {
-                document.getElementById('modalTitle').textContent = product.title;
-                document.getElementById('modalPrice').textContent = product.price + ' Bs';
-                document.getElementById('modalDescription').textContent = product.description;
-                
-                // Imagen principal
-                const mainImg = document.getElementById('modalMainImage');
-                mainImg.src = this.productModalImages[this.productModalIndex];
-                
-                // Thumbnails
-                const thumbsContainer = document.getElementById('modalThumbnails');
-                if (this.productModalImages.length > 1) {
-                    const thumbsHTML = this.productModalImages.map((img, idx) =>
-                        `<img src="${img}" class="thumbnail${idx === this.productModalIndex ? ' active' : ''}" onclick="app.setModalImage(${idx})">`
-                    ).join('');
-                    thumbsContainer.innerHTML = thumbsHTML;
-                    thumbsContainer.style.display = 'flex';
-                } else {
-                    thumbsContainer.style.display = 'none';
-                }
-
-                // Mostrar/ocultar flechas y dots
-                const modalPrevBtn = document.getElementById('modalPrevBtn');
-                const modalNextBtn = document.getElementById('modalNextBtn');
-                const modalDots = document.getElementById('modalCarouselDots');
-
-                if (this.productModalImages.length > 1) {
-                    modalPrevBtn.style.display = 'block';
-                    modalNextBtn.style.display = 'block';
-                    modalDots.style.display = 'flex';
-
-                    // Dots
-                    modalDots.innerHTML = '';
-                    this.productModalImages.forEach((_, idx) => {
-                        const dot = document.createElement('div');
-                        dot.className = 'dot' + (idx === this.productModalIndex ? ' active' : '');
-                        dot.onclick = (e) => {
-                            e.stopPropagation();
-                            this.showImage(productId, idx, e);
-                        };
-                        modalDots.appendChild(dot);
-                    });
-                } else {
-                    modalPrevBtn.style.display = 'none';
-                    modalNextBtn.style.display = 'none';
-                    modalDots.style.display = 'none';
-                }
-            }
-
-            setModalImage(idx) {
-                this.productModalIndex = idx;
-                const mainImg = document.getElementById('modalMainImage');
-                mainImg.src = this.productModalImages[idx];
-                
-                // Actualizar thumbnails
-                const thumbs = document.querySelectorAll('#modalThumbnails .thumbnail');
-                thumbs.forEach((thumb, i) => {
-                    thumb.classList.toggle('active', i === idx);
+            setupModalHistoryHandler() {
+                // Manejar el botón "Atrás" para modales
+                window.addEventListener('popstate', (e) => {
+                    const modal = document.getElementById('productModal');
+                    const cartModal = document.getElementById('cartModal');
+                    
+                    // Si hay un modal abierto, cerrarlo (sin hacer history.back() para evitar loop)
+                    if (modal && modal.style.display === 'block') {
+                        modal.style.display = 'none';
+                        document.body.style.overflow = 'auto';
+                        
+                        const modalContent = modal.querySelector('.modal-content');
+                        if (this._modalWheelHandler) {
+                            modalContent.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
+                        }
+                        if (this._modalTouchStartHandler) {
+                            modalContent.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                        }
+                        if (this._modalTouchMoveHandler) {
+                            modalContent.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                        }
+                        
+                        this._modalWheelHandler = null;
+                        this._modalTouchStartHandler = null;
+                        this._modalTouchMoveHandler = null;
+                        this._touchStartY = 0;
+                        this._touchInsideThumbnails = false;
+                        return;
+                    }
+                    
+                    // Si hay carrito abierto, cerrarlo también
+                    if (cartModal && cartModal.style.display === 'block') {
+                        this.closeCart();
+                        return;
+                    }
+                    
+                    // Si no hay modales abiertos, confirmar salida
+                    const userConfirmed = confirm('¿Estás seguro de que quieres abandonar TiendaOnline?');
+                    if (!userConfirmed) {
+                        try {
+                            history.pushState(null, '', window.location.href);
+                        } catch (err) {
+                            // ignore
+                        }
+                    }
                 });
-
-                // Actualizar dots
-                const dots = document.querySelectorAll('#modalCarouselDots .dot');
-                dots.forEach((dot, i) => {
-                    dot.classList.toggle('active', i === idx);
-                });
-            }
-
-            // Cambiar imagen anterior
-            prevModalImage() {
-                if (this.productModalImages.length < 2) return;
-                this.productModalIndex = (this.productModalIndex - 1 + this.productModalImages.length) % this.productModalImages.length;
-                this.updateModalCarousel();
-            }
-
-            // Cambiar imagen siguiente
-            nextModalImage() {
-                if (this.productModalImages.length < 2) return;
-                this.productModalIndex = (this.productModalIndex + 1) % this.productModalImages.length;
-                this.updateModalCarousel();
-            }
-
-            // Mostrar imagen por índice (al hacer click en un dot)
-            showModalImage(idx) {
-                if (this.productModalImages.length < 2) return;
-                this.productModalIndex = idx;
-                this.updateModalCarousel();
-            }
-
-            // Actualiza la imagen y los dots activos
-            updateModalCarousel() {
-                const mainImg = document.getElementById('modalMainImage');
-                mainImg.style.opacity = 0.5;
-                setTimeout(() => {
-                    mainImg.src = this.productModalImages[this.productModalIndex];
-                    mainImg.style.opacity = 1;
-                }, 120);
-                // Actualizar dots
-                const dots = document.getElementById('modalCarouselDots');
-                if (dots) {
-                    dots.querySelectorAll('.dot').forEach((dot, i) => {
-                        dot.classList.toggle('active', i === this.productModalIndex);
-                    });
-                }
             }
         }
 
@@ -2532,63 +2481,6 @@
         } else {
             preloadImages();
         }
-
-        // Confirmación al intentar salir de la página (cerrar pestaña, recargar o navegar fuera)
-        window.addEventListener('beforeunload', (e) => {
-            const msg = '¿Estás seguro de que quieres abandonar esta página?';
-            // Algunos navegadores ignoran el texto personalizado pero requieren returnValue para mostrar el diálogo
-            e.preventDefault();
-            e.returnValue = msg;
-            return msg;
-        });
-
-        // Sistema de confirmación forzada para abandonar la página
-        function setupForceConfirmation() {
-            // 1. Para cerrar pestaña, recargar, o escribir nueva URL
-            window.addEventListener('beforeunload', (e) => {
-                const message = '¿Estás seguro de que quieres salir de TiendaOnline?';
-                e.preventDefault();
-                e.returnValue = message;
-                return message;
-            });
-
-            // 2. Para botón "Atrás" del navegador
-            window.addEventListener('popstate', (e) => {
-                const userConfirmed = confirm('¿Estás seguro de que quieres abandonar TiendaOnline?');
-                if (!userConfirmed) {
-                    // Mantener al usuario en la página actual
-                    history.pushState(null, '', window.location.href);
-                    try { e.preventDefault(); } catch (_) {}
-                }
-            });
-
-            // 3. Crear entrada en historial para capturar el botón "Atrás"
-            try {
-                history.pushState(null, '', window.location.href);
-            } catch (err) {
-                // algunos entornos restringen pushState
-                console.warn('pushState no disponible:', err);
-            }
-
-            // 4. Para enlaces externos (opcional - evita navegación externa sin confirmar)
-            document.addEventListener('click', (e) => {
-                const link = e.target.closest && e.target.closest('a[href]');
-                if (link && link.href) {
-                    const linkURL = new URL(link.href, window.location.origin);
-                    if (linkURL.origin !== window.location.origin) {
-                        const userConfirmed = confirm('¿Estás seguro de que quieres salir de TiendaOnline?');
-                        if (!userConfirmed) {
-                            e.preventDefault();
-                        }
-                    }
-                }
-            });
-        }
-
-        // Llamar la función al cargar la página
-        document.addEventListener('DOMContentLoaded', () => {
-            setupForceConfirmation();
-        });
     </script>
 </body>
 </html>
