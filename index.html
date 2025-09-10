@@ -2063,11 +2063,15 @@
                     }
                 });
 
-                // **AGREGADO: detectar botón "Atrás" del navegador y cerrar modal**
+                // **AGREGADO: detectar botón "Atrás" del navegador y cerrar modales**
                 window.addEventListener('popstate', () => {
-                    const modal = document.getElementById('productModal');
-                    if (modal && modal.style.display === 'block') {
-                        this.closeProductModal();
+                    const productModal = document.getElementById('productModal');
+                    const cartModal = document.getElementById('cartModal');
+                    
+                    if (productModal && productModal.style.display === 'block') {
+                        app.closeProductModal();
+                    } else if (cartModal && cartModal.style.display === 'block') {
+                        app.closeCart();
                     }
                 });
             }
@@ -2196,9 +2200,26 @@
                 document.getElementById('cartModal').style.display = 'block';
                 document.body.style.overflow = 'hidden';
                 this.renderer.renderCart();
+                
+                // **AGREGAR ESTADO AL HISTORIAL para capturar "Atrás" sin cambiar URL visible**
+                try {
+                    history.pushState({ cartOpen: true }, '', window.location.href);
+                } catch (err) {
+                    // no crítico; si falla (por CSP u otro), el modal sigue funcionando
+                    console.warn('pushState falló para carrito:', err);
+                }
             }
 
             closeCart() {
+                // **AGREGAR ESTA VERIFICACIÓN:**
+                // Si el historial tiene el estado cartOpen, retroceder en historial y salir
+                if (history.state && history.state.cartOpen) {
+                    // Esto desencadenará 'popstate' y cerrará el carrito sin cambiar la URL visible
+                    history.back();
+                    return;
+                }
+
+                // Ocultar modal y restaurar scroll del body
                 document.getElementById('cartModal').style.display = 'none';
                 document.body.style.overflow = 'auto';
             }
