@@ -2541,6 +2541,54 @@
             e.returnValue = msg;
             return msg;
         });
+
+        // Sistema de confirmación forzada para abandonar la página
+        function setupForceConfirmation() {
+            // 1. Para cerrar pestaña, recargar, o escribir nueva URL
+            window.addEventListener('beforeunload', (e) => {
+                const message = '¿Estás seguro de que quieres salir de TiendaOnline?';
+                e.preventDefault();
+                e.returnValue = message;
+                return message;
+            });
+
+            // 2. Para botón "Atrás" del navegador
+            window.addEventListener('popstate', (e) => {
+                const userConfirmed = confirm('¿Estás seguro de que quieres abandonar TiendaOnline?');
+                if (!userConfirmed) {
+                    // Mantener al usuario en la página actual
+                    history.pushState(null, '', window.location.href);
+                    try { e.preventDefault(); } catch (_) {}
+                }
+            });
+
+            // 3. Crear entrada en historial para capturar el botón "Atrás"
+            try {
+                history.pushState(null, '', window.location.href);
+            } catch (err) {
+                // algunos entornos restringen pushState
+                console.warn('pushState no disponible:', err);
+            }
+
+            // 4. Para enlaces externos (opcional - evita navegación externa sin confirmar)
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest && e.target.closest('a[href]');
+                if (link && link.href) {
+                    const linkURL = new URL(link.href, window.location.origin);
+                    if (linkURL.origin !== window.location.origin) {
+                        const userConfirmed = confirm('¿Estás seguro de que quieres salir de TiendaOnline?');
+                        if (!userConfirmed) {
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+        }
+
+        // Llamar la función al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            setupForceConfirmation();
+        });
     </script>
 </body>
 </html>
