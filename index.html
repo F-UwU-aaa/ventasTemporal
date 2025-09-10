@@ -2062,6 +2062,30 @@
                         this.closeProductModal();
                     }
                 });
+
+                // <-- ADICIÓN: manejar popstate para cerrar modal/carrito al pulsar "Atrás" -->
+                window.addEventListener('popstate', (e) => {
+                    // Si el modal de producto está abierto y el estado actual NO es nuestro estado modal -> cerrarlo
+                    if (this.isProductModalOpen()) {
+                        const state = e.state;
+                        if (!state || state.ui !== 'product-modal') {
+                            this._modalHistoryPushed = false;
+                            this._closeProductModalInternal();
+                            return;
+                        }
+                    }
+
+                    // Si el carrito está abierto y el estado actual NO es nuestro estado cart -> cerrarlo
+                    if (this.isCartOpen()) {
+                        const state = e.state;
+                        if (!state || state.ui !== 'cart') {
+                            this._cartHistoryPushed = false;
+                            this._closeCartInternal();
+                            return;
+                        }
+                    }
+                });
+                // <-- FIN ADICIÓN -->
             }
 
             handleSearch(query) {
@@ -2185,14 +2209,35 @@
             }
 
             openCart() {
+                // Push state para que "Atrás" cierre el carrito en lugar de salir de la página
+                if (!this._cartHistoryPushed) {
+                    try {
+                        history.pushState({ ui: 'cart' }, '', '#cart');
+                        this._cartHistoryPushed = true;
+                    } catch (e) {
+                        console.warn('pushState falló:', e);
+                    }
+                }
+
                 document.getElementById('cartModal').style.display = 'block';
                 document.body.style.overflow = 'hidden';
                 this.renderer.renderCart();
             }
 
             closeCart() {
+                // Si abrimos el carrito con pushState, navegar atrás para quitar esa entrada (y dejar que popstate cierre el DOM)
+                if (this._cartHistoryPushed) {
+                    history.back();
+                } else {
+                    this._closeCartInternal();
+                }
+            }
+
+            // Cierre limpio del DOM para el carrito (no toca el history)
+            _closeCartInternal() {
                 document.getElementById('cartModal').style.display = 'none';
                 document.body.style.overflow = 'auto';
+                this._cartHistoryPushed = false;
             }
 
             // --- Carrusel en tarjetas de producto ---
