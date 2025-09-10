@@ -1973,7 +1973,6 @@
                     await this.loadProductsFromJSON();
                     this.setupEventListeners();
                     this.setupPriceRange();
-                    this.setupModalHistoryHandler(); // ← AGREGADO
                     this.isInitialized = true;
                 } catch (error) {
                     console.error('Error inicializando la aplicación:', error);
@@ -2060,6 +2059,14 @@
                     }
                     if (e.key === 'Escape') {
                         this.closeCart();
+                        this.closeProductModal();
+                    }
+                });
+
+                // **AGREGADO: detectar botón "Atrás" del navegador y cerrar modal**
+                window.addEventListener('popstate', () => {
+                    const modal = document.getElementById('productModal');
+                    if (modal && modal.style.display === 'block') {
                         this.closeProductModal();
                     }
                 });
@@ -2257,14 +2264,6 @@
                 
                 this.productModalIndex = 0;
                 this.productModalImages = product.images.length ? product.images : [product.mainImage];
-                
-                // ✅ NUEVO: Agregar entrada al historial para manejar botón "Atrás"
-                try {
-                    history.pushState({ modal: 'product', productId: productId }, '', window.location.href);
-                } catch (err) {
-                    console.warn('pushState no disponible:', err);
-                }
-                
                 this.renderProductModal(product);
 
                 const modal = document.getElementById('productModal');
@@ -2295,59 +2294,27 @@
                     dot.onclick = (e) => { e.stopPropagation(); this.showModalImage(parseInt(dot.dataset.idx)); };
                 });
 
-                // Existing wheel/touch handlers (mantener el código existente)
-                if (!this._modalWheelHandler) {
-                    this._modalWheelHandler = (e) => {
-                        if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
-                            return;
-                        }
+                // ... (listeners touch/wheel y handler del modal) ...
 
-                        const delta = e.deltaY;
-                        const scrollTop = modalContent.scrollTop;
-                        const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
-
-                        if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
-                            e.preventDefault();
-                        }
-                    };
-                }
-
-                if (!this._touchStartY) this._touchStartY = 0;
-
-                this._modalTouchStartHandler = (e) => {
-                    if (e.target && e.target.closest && (e.target.closest('#modalThumbnails') || e.target.closest('#modalCarousel') || e.target.closest('.modal-thumbnails'))) {
-                        this._touchInsideThumbnails = true;
-                    } else {
-                        this._touchInsideThumbnails = false;
-                    }
-                    this._touchStartY = e.touches ? e.touches[0].clientY : 0;
-                };
-
-                this._modalTouchMoveHandler = (e) => {
-                    if (this._touchInsideThumbnails) return;
-
-                    const currentY = e.touches ? e.touches[0].clientY : 0;
-                    const delta = this._touchStartY - currentY;
-                    const scrollTop = modalContent.scrollTop;
-                    const maxScroll = modalContent.scrollHeight - modalContent.clientHeight;
-
-                    if ((delta > 0 && scrollTop >= maxScroll) || (delta < 0 && scrollTop <= 0)) {
-                        e.preventDefault();
-                    }
-                };
-
-                modalContent.addEventListener('wheel', this._modalWheelHandler, { passive: false });
-                modalContent.addEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
-                modalContent.addEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
-
-                // Modal add to cart button
+                // <-- ADICIÓN: click handler para el botón "Agregar al Carrito" del modal -->
                 const modalAddBtn = document.getElementById('modalAddToCart');
                 if (modalAddBtn) {
+                    // Remover handler previo por si acaso
                     modalAddBtn.onclick = null;
                     modalAddBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        // Pasamos el elemento botón para que showAddToCartFeedback lo utilice
                         this.addToCart(productId, modalAddBtn);
                     });
+                }
+                // <-- FIN ADICIÓN -->
+
+                // **AGREGAR ESTADO AL HISTORIAL para capturar "Atrás" sin cambiar URL visible**
+                try {
+                    history.pushState({ modalOpen: true }, '', window.location.href);
+                } catch (err) {
+                    // no crítico; si falla (por CSP u otro), el modal sigue funcionando
+                    console.warn('pushState falló:', err);
                 }
             }
 
@@ -2355,83 +2322,139 @@
                 const modal = document.getElementById('productModal');
                 const modalContent = modal.querySelector('.modal-content');
 
-                // ✅ NUEVO: Solo ir atrás en historial si el modal está abierto
-                if (modal.style.display === 'block') {
-                    try {
-                        history.back();
-                    } catch (err) {
-                        console.warn('history.back falló:', err);
-                    }
+                // **AGREGAR ESTA VERIFICACIÓN:**
+                // Si el historial tiene el estado modalOpen, retroceder en historial y salir
+                if (history.state && history.state.modalOpen) {
+                    // Esto desencadenará 'popstate' y cerrará el modal sin cambiar la URL visible
+                    history.back();
+                    return;
                 }
 
                 // Ocultar modal y restaurar scroll del body
                 modal.style.display = 'none';
                 document.body.style.overflow = 'auto';
 
-                // Remover listeners existentes
+                // Remover listeners añadidos al abrir para evitar fugas de memoria
                 if (this._modalWheelHandler) {
-                    modalContent.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
+                    modal.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
                 }
                 if (this._modalTouchStartHandler) {
-                    modalContent.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
+                    modal.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
                 }
                 if (this._modalTouchMoveHandler) {
-                    modalContent.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
+                    modal.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
                 }
 
+                // Limpiar referencias
                 this._modalWheelHandler = null;
                 this._modalTouchStartHandler = null;
                 this._modalTouchMoveHandler = null;
                 this._touchStartY = 0;
-                this._touchInsideThumbnails = false;
             }
 
-            setupModalHistoryHandler() {
-                // Manejar el botón "Atrás" para modales
-                window.addEventListener('popstate', (e) => {
-                    const modal = document.getElementById('productModal');
-                    const cartModal = document.getElementById('cartModal');
-                    
-                    // Si hay un modal abierto, cerrarlo (sin hacer history.back() para evitar loop)
-                    if (modal && modal.style.display === 'block') {
-                        modal.style.display = 'none';
-                        document.body.style.overflow = 'auto';
-                        
-                        const modalContent = modal.querySelector('.modal-content');
-                        if (this._modalWheelHandler) {
-                            modalContent.removeEventListener('wheel', this._modalWheelHandler, { passive: false });
-                        }
-                        if (this._modalTouchStartHandler) {
-                            modalContent.removeEventListener('touchstart', this._modalTouchStartHandler, { passive: true });
-                        }
-                        if (this._modalTouchMoveHandler) {
-                            modalContent.removeEventListener('touchmove', this._modalTouchMoveHandler, { passive: false });
-                        }
-                        
-                        this._modalWheelHandler = null;
-                        this._modalTouchStartHandler = null;
-                        this._modalTouchMoveHandler = null;
-                        this._touchStartY = 0;
-                        this._touchInsideThumbnails = false;
-                        return;
-                    }
-                    
-                    // Si hay carrito abierto, cerrarlo también
-                    if (cartModal && cartModal.style.display === 'block') {
-                        this.closeCart();
-                        return;
-                    }
-                    
-                    // Si no hay modales abiertos, confirmar salida
-                    const userConfirmed = confirm('¿Estás seguro de que quieres abandonar TiendaOnline?');
-                    if (!userConfirmed) {
-                        try {
-                            history.pushState(null, '', window.location.href);
-                        } catch (err) {
-                            // ignore
-                        }
-                    }
+            renderProductModal(product) {
+                document.getElementById('modalTitle').textContent = product.title;
+                document.getElementById('modalPrice').textContent = product.price + ' Bs';
+                document.getElementById('modalDescription').textContent = product.description;
+                
+                // Imagen principal
+                const mainImg = document.getElementById('modalMainImage');
+                mainImg.src = this.productModalImages[this.productModalIndex];
+                
+                // Thumbnails
+                const thumbsContainer = document.getElementById('modalThumbnails');
+                if (this.productModalImages.length > 1) {
+                    const thumbsHTML = this.productModalImages.map((img, idx) =>
+                        `<img src="${img}" class="thumbnail${idx === this.productModalIndex ? ' active' : ''}" onclick="app.setModalImage(${idx})">`
+                    ).join('');
+                    thumbsContainer.innerHTML = thumbsHTML;
+                    thumbsContainer.style.display = 'flex';
+                } else {
+                    thumbsContainer.style.display = 'none';
+                }
+
+                // Mostrar/ocultar flechas y dots
+                const modalPrevBtn = document.getElementById('modalPrevBtn');
+                const modalNextBtn = document.getElementById('modalNextBtn');
+                const modalDots = document.getElementById('modalCarouselDots');
+
+                if (this.productModalImages.length > 1) {
+                    modalPrevBtn.style.display = 'block';
+                    modalNextBtn.style.display = 'block';
+                    modalDots.style.display = 'flex';
+
+                    // Dots
+                    modalDots.innerHTML = '';
+                    this.productModalImages.forEach((_, idx) => {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot' + (idx === this.productModalIndex ? ' active' : '');
+                        dot.onclick = (e) => {
+                            e.stopPropagation();
+                            this.showImage(productId, idx, e);
+                        };
+                        modalDots.appendChild(dot);
+                    });
+                } else {
+                    modalPrevBtn.style.display = 'none';
+                    modalNextBtn.style.display = 'none';
+                    modalDots.style.display = 'none';
+                }
+            }
+
+            setModalImage(idx) {
+                this.productModalIndex = idx;
+                const mainImg = document.getElementById('modalMainImage');
+                mainImg.src = this.productModalImages[idx];
+                
+                // Actualizar thumbnails
+                const thumbs = document.querySelectorAll('#modalThumbnails .thumbnail');
+                thumbs.forEach((thumb, i) => {
+                    thumb.classList.toggle('active', i === idx);
                 });
+
+                // Actualizar dots
+                const dots = document.querySelectorAll('#modalCarouselDots .dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === idx);
+                });
+            }
+
+            // Cambiar imagen anterior
+            prevModalImage() {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = (this.productModalIndex - 1 + this.productModalImages.length) % this.productModalImages.length;
+                this.updateModalCarousel();
+            }
+
+            // Cambiar imagen siguiente
+            nextModalImage() {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = (this.productModalIndex + 1) % this.productModalImages.length;
+                this.updateModalCarousel();
+            }
+
+            // Mostrar imagen por índice (al hacer click en un dot)
+            showModalImage(idx) {
+                if (this.productModalImages.length < 2) return;
+                this.productModalIndex = idx;
+                this.updateModalCarousel();
+            }
+
+            // Actualiza la imagen y los dots activos
+            updateModalCarousel() {
+                const mainImg = document.getElementById('modalMainImage');
+                mainImg.style.opacity = 0.5;
+                setTimeout(() => {
+                    mainImg.src = this.productModalImages[this.productModalIndex];
+                    mainImg.style.opacity = 1;
+                }, 120);
+                // Actualizar dots
+                const dots = document.getElementById('modalCarouselDots');
+                if (dots) {
+                    dots.querySelectorAll('.dot').forEach((dot, i) => {
+                        dot.classList.toggle('active', i === this.productModalIndex);
+                    });
+                }
             }
         }
 
