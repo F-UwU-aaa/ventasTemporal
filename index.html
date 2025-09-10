@@ -654,42 +654,51 @@
                 }
             }
 
-            // AGREGADO: Método para generar el mensaje de WhatsApp
-            generateWhatsAppMessage() {
-                if (this.state.cart.length === 0) {
-                    return '';
-                }
-                let message = "🛒 *NUEVO PEDIDO - TiendaOnline*\n\n";
-                message += "📋 *DETALLE DEL PEDIDO:*\n";
-                message += "━━━━━━━━━━━━━━━━━━━━━━\n\n";
-                this.state.cart.forEach((item, index) => {
-                    message += `${index + 1}. *${item.title}*\n`;
-                    message += `   • Cantidad: ${item.quantity}\n`;
-                    message += `   • Precio unitario: ${item.price} Bs\n`;
-                    message += `   • Subtotal: ${(item.price * item.quantity).toFixed(2)} Bs\n\n`;
-                });
-                message += "━━━━━━━━━━━━━━━━━━━━━━\n";
-                message += `💰 *TOTAL: ${this.state.getCartTotal().toFixed(2)} Bs*\n\n`;
-                message += "📞 Por favor confirma tu pedido y coordina la entrega.";
-                return message;
+        // AGREGADO: Método para generar el mensaje de WhatsApp
+        generateWhatsAppMessage() {
+            if (this.state.cart.length === 0) {
+                return '';
             }
+            let message = "🛒 *NUEVO PEDIDO - TiendaOnline*\n\n";
+            message += "📋 *DETALLE DEL PEDIDO:*\n";
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n";
+            this.state.cart.forEach((item, index) => {
+                message += `*${index + 1}. ${item.title}*\n`;
+                message += `   • Cantidad: ${item.quantity}\n`;
+                message += `   • Precio unitario: ${item.price} Bs\n`;
+                message += `   • Subtotal: ${(item.price * item.quantity).toFixed(2)} Bs\n\n`;
+            });
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n";
+            message += `*💰 TOTAL: ${this.state.getCartTotal().toFixed(2)} Bs*\n\n`;
+            message += "📞 Por favor confirma tu pedido y coordina la entrega.";
+            return message;
+        }
 
-            // AGREGADO: Método para enviar a WhatsApp
-            sendToWhatsApp() {
-                if (this.state.cart.length === 0) {
-                    this.renderer.showFeedbackMessage('El carrito está vacío');
-                    return;
-                }
-                const phoneNumber = '59169733503'; // Cambia este número por el tuyo si lo deseas
-                const message = this.generateWhatsAppMessage();
-                const encodedMessage = encodeURIComponent(message);
-                const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-                window.open(whatsappURL, '_blank');
-                this.renderer.showFeedbackMessage('Redirigiendo a WhatsApp...');
-                setTimeout(() => {
-                    this.closeCart();
-                }, 1500);
+        // AGREGADO: Método para enviar a WhatsApp
+        sendToWhatsApp() {
+            if (this.state.cart.length === 0) {
+                this.renderer.showFeedbackMessage('El carrito está vacío');
+                return;
             }
+            
+            const phoneNumber = '59169733503';
+            const message = this.generateWhatsAppMessage();
+            
+            // SOLO codificar saltos de línea y asteriscos, NO los emojis
+            const encodedMessage = message
+                .replace(/\n/g, '%0A')  // Saltos de línea
+                .replace(/\*/g, '%2A'); // Asteriscos para negritas
+            
+            const whatsappURL = `https://api.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}`;
+            
+            window.open(whatsappURL, '_blank');
+            
+            this.renderer.showFeedbackMessage('Enviando a WhatsApp...');
+            
+            setTimeout(() => {
+                this.closeCart();
+            }, 1500);
+        }
 
             setupEventListeners() {
                 // Búsqueda con debounce optimizado
