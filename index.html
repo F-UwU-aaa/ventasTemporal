@@ -259,15 +259,25 @@
             }
 
             applyFilters() {
-                let filtered = this.allProducts;
+                // Función auxiliar para quitar acentos
+                function removeAccents(str) {
+                    return str.normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '')
+                            .toLowerCase();
+                }
+                let filtered = [...this.allProducts];
 
-                // Filtro de búsqueda
+                // Filtro de búsqueda con soporte para acentos y mayúsculas/minúsculas
                 if (this.searchQuery) {
-                    const query = this.searchQuery.toLowerCase();
-                    filtered = filtered.filter(product => 
-                        product.title.toLowerCase().includes(query) ||
-                        product.description.toLowerCase().includes(query)
-                    );
+                    const query = removeAccents(this.searchQuery.trim());
+                    
+                    filtered = filtered.filter(product => {
+                        const titleNormalized = removeAccents(product.title);
+                        const descriptionNormalized = removeAccents(product.description);
+                        
+                        return titleNormalized.includes(query) || 
+                            descriptionNormalized.includes(query);
+                    });
                 }
 
                 // Filtro de precio
@@ -681,7 +691,7 @@
                 return;
             }
             
-            const phoneNumber = '59169733503';
+            const phoneNumber = '59176748058';
             const message = this.generateWhatsAppMessage();
             
             // SOLO codificar saltos de línea y asteriscos, NO los emojis
@@ -1268,6 +1278,8 @@
         } else {
             preloadImages();
         }
+
+        // todo funciona bien
     </script>
 </body>
 </html>
