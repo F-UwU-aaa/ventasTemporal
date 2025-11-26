@@ -12,7 +12,7 @@ class TiendaApp {
     }
 
     async init() {
-
+        this.renderer.renderSkeletons();
         try {
             await this.loadProductsFromJSON();
             this.setupEventListeners();

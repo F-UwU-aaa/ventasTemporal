@@ -11,6 +11,25 @@ class Renderer {
         this.totalAmount = document.getElementById('totalAmount');
     }
 
+    renderSkeletons(count = CONFIG.PRODUCTS_PER_PAGE) {
+        const skeletons = Array.from({ length: count }, () => `
+            <div class="skeleton-card">
+                <div class="skeleton-image skeleton"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-title skeleton"></div>
+                    <div class="skeleton-description skeleton"></div>
+                    <div class="skeleton-description skeleton"></div>
+                    <div class="skeleton-footer">
+                        <div class="skeleton-price skeleton"></div>
+                        <div class="skeleton-button skeleton"></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        this.productsGrid.innerHTML = skeletons;
+    }
+
     renderProducts() {
         if (this.state.displayedProducts.length === 0) {
             this.renderNoResults();
@@ -29,6 +48,11 @@ class Renderer {
         this.productsGrid.innerHTML = '';
         this.productsGrid.appendChild(fragment);
 
+        // Activar lazy loading después del render
+        requestAnimationFrame(() => {
+            this.setupLazyLoading();
+        });
+
         this.updateProductsCount();
         this.renderPagination();
     }
@@ -40,8 +64,10 @@ class Renderer {
         // Solo imagen principal, sin carrusel ni controles
         const imageHTML = `
             <div class="product-image">
-                <img src="${product.mainImage}"
-                     alt="${product.title}">
+                <img data-src="${product.mainImage}"
+                     alt="${product.title}"
+                     data-loading="true"
+                     style="opacity: 0;">
             </div>
         `;
         div.innerHTML = `
@@ -56,6 +82,34 @@ class Renderer {
             </div>
         `;
         return div;
+    }
+
+    setupLazyLoading() {
+        // Cargar inmediatamente la primera imagen visible de cada producto/carrusel
+        const productCards = this.productsGrid.querySelectorAll('.product-card');
+        productCards.forEach(card => {
+            // Carrusel
+            const firstCarouselImg = card.querySelector('.carousel-image');
+            if (firstCarouselImg && firstCarouselImg.dataset.src && (!firstCarouselImg.src || firstCarouselImg.src === '' || firstCarouselImg.src.endsWith('placeholder.jpg'))) {
+                firstCarouselImg.src = firstCarouselImg.dataset.src;
+                firstCarouselImg.removeAttribute('data-loading');
+                firstCarouselImg.style.opacity = '1';
+            }
+            // Imagen simple
+            const firstImg = card.querySelector('.product-image img');
+            if (firstImg && firstImg.dataset.src && (!firstImg.src || firstImg.src === '' || firstImg.src.endsWith('placeholder.jpg'))) {
+                firstImg.src = firstImg.dataset.src;
+                firstImg.removeAttribute('data-loading');
+                firstImg.style.opacity = '1';
+            }
+        });
+        // El resto de imágenes siguen usando lazy loading
+        const images = this.productsGrid.querySelectorAll('img[data-src]');
+        images.forEach(img => {
+            if (!img.src || img.src === '' || img.src.endsWith('placeholder.jpg')) {
+                this.lazyLoader.observe(img);
+            }
+        });
     }
 
     renderNoResults() {
