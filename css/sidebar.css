@@ -1,0 +1,199 @@
+/* Sidebar mejorado */
+.sidebar {
+    width: 300px;
+    background: var(--bg-sidebar);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    height: fit-content;
+    position: sticky;
+    top: 100px;
+    backdrop-filter: blur(10px);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filter-section {
+    margin-bottom: 2.5rem;
+}
+
+.filter-title {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+.price-filter h3,
+.sort-filter h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    color: var(--text-main);
+}
+
+.price-range {
+    position: relative;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin: 1.8rem 0;
+}
+
+.price-range input[type="range"] {
+    position: absolute;
+    width: 100%;
+    height: 8px;
+    background: transparent;
+    -webkit-appearance: none;
+    pointer-events: none;
+}
+
+.price-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    cursor: pointer;
+    pointer-events: all;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+    transition: transform 0.2s;
+}
+
+.price-range input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.range-fill {
+    position: absolute;
+    height: 8px;
+    background: var(--accent-gradient);
+    border-radius: 4px;
+}
+
+.price-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.sort-select {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    font-size: 1rem;
+    background: var(--bg-card);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Sidebar mejorado */
+.sidebar {
+    width: 300px;
+    background: var(--bg-sidebar);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    height: fit-content;
+    position: sticky;
+    top: 100px;
+    backdrop-filter: blur(10px);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filter-section {
+    margin-bottom: 2.5rem;
+}
+
+.filter-title {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+.price-filter h3,
+.sort-filter h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    color: var(--text-main);
+}
+
+.price-range {
+    position: relative;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin: 1.8rem 0;
+}
+
+.price-range input[type="range"] {
+    position: absolute;
+    width: 100%;
+    height: 8px;
+    background: transparent;
+    -webkit-appearance: none;
+    pointer-events: none;
+}
+
+.price-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    cursor: pointer;
+    pointer-events: all;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+    transition: transform 0.2s;
+}
+
+.price-range input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.range-fill {
+    position: absolute;
+    height: 8px;
+    background: var(--accent-gradient);
+    border-radius: 4px;
+}
+
+.price-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.sort-select {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    font-size: 1rem;
+    background: var(--bg-card);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}

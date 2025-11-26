@@ -1,0 +1,216 @@
+/* Product Modal mejorado */
+.product-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--modal-overlay);
+    backdrop-filter: blur(5px);
+    z-index: 1001;
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-main);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 50%;
+}
+
+.close-modal:hover {
+    color: var(--accent-color);
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column !important;
+    gap: 3rem;
+    padding: 2.5rem;
+}
+
+.modal-images {
+    flex: 1;
+    width: 100%;
+}
+
+.modal-main-image {
+    width: 100%;
+    height: 350px;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 15px;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.modal-thumbnails {
+    display: flex;
+    gap: 0.8rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+}
+
+.thumbnail {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 10px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    background: white;
+    padding: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+}
+
+.thumbnail.active {
+    opacity: 1;
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 15px;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.modal-details {
+    flex: 1;
+}
+
+.modal-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    color: var(--text-main);
+}
+
+.modal-price {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 2rem;
+}
+
+.modal-description {
+    line-height: 1.8;
+    color: var(--text-secondary);
+    margin-bottom: 3rem;
+    font-size: 1.0rem;
+    white-space: pre-line;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1.5rem;
+}
+
+/* Carrusel del modal */
+.modal-carousel {
+    position: relative;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.10);
+    margin-bottom: 1.2rem;
+}
+
+/* Flechas overlay */
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    color: #FF8C42;
+    border: 2px solid rgba(255, 140, 66, 0.3);
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.carousel-btn:hover {
+    background: rgba(255, 140, 66, 0.9);
+    color: #fff;
+    border-color: #FF8C42;
+    transform: translateY(-50%) scale(1.12);
+    box-shadow: 0 6px 30px rgba(255, 140, 66, 0.5);
+}
+
+/* Ocultar botones en pantallas pequeñas */
+@media screen and (max-width: 520px) {
+    .carousel-btn {
+        display: none !important;
+    }
+}
+
+/* Dots/bolitas */
+.carousel-dots {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.dot.active {
+    background: var(--accent-gradient);
+    transform: scale(1.2);
+    border-color: #764ba2;
+}
