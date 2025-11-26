@@ -11,24 +11,7 @@ class Renderer {
         this.totalAmount = document.getElementById('totalAmount');
     }
 
-    renderSkeletons(count = CONFIG.PRODUCTS_PER_PAGE) {
-        const skeletons = Array.from({ length: count }, () => `
-            <div class="skeleton-card">
-                <div class="skeleton-image skeleton"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-title skeleton"></div>
-                    <div class="skeleton-description skeleton"></div>
-                    <div class="skeleton-description skeleton"></div>
-                    <div class="skeleton-footer">
-                        <div class="skeleton-price skeleton"></div>
-                        <div class="skeleton-button skeleton"></div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
 
-        this.productsGrid.innerHTML = skeletons;
-    }
 
     renderProducts() {
         if (this.state.displayedProducts.length === 0) {
@@ -242,26 +225,6 @@ class Renderer {
         `;
         button.style.background = 'linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%)';
         button.classList.add('view-cart-state');
-
-        // Mostrar mensaje de retroalimentación
-        this.showFeedbackMessage('Producto agregado al carrito');
-    }
-
-    showFeedbackMessage(message, title = 'Notificación') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-
-        toast.innerHTML = `
-            <img src="Imagenes_Marca/favicon.png" alt="Icono" class="toast-icon">
-            <div class="toast-content">
-                <span class="toast-title">${title}</span>
-                <span class="toast-message">${message}</span>
-            </div>
-        `;
-
         container.appendChild(toast);
 
         // Remover después de 3 segundos
