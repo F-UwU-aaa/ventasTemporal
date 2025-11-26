@@ -13,6 +13,7 @@ class TiendaApp {
 
     async init() {
         this.renderer.renderSkeletons();
+        this.setupHistoryHandling(); // Configurar manejo de historial
         try {
             await this.loadProductsFromJSON();
             this.setupEventListeners();
@@ -23,6 +24,29 @@ class TiendaApp {
             console.error('Error inicializando la aplicación:', error);
             this.renderer.renderError(error.message);
         }
+    }
+
+    // AGREGADO: Manejo del botón "Atrás"
+    setupHistoryHandling() {
+        window.addEventListener('popstate', (event) => {
+            const state = event.state;
+
+            // Cerrar todo primero (limpieza)
+            this._hideCart();
+            this._hideProductModal();
+            this._hideSidebar();
+
+            // Restaurar estado si existe
+            if (state) {
+                if (state.modal === 'cart') {
+                    this._showCart();
+                } else if (state.modal === 'product' && state.productId) {
+                    this._showProductModal(state.productId);
+                } else if (state.modal === 'sidebar') {
+                    this._showSidebar();
+                }
+            }
+        });
     }
 
     async loadProductsFromJSON() {
@@ -78,7 +102,7 @@ class TiendaApp {
         this.renderer.showFeedbackMessage('Enviando a WhatsApp...');
 
         setTimeout(() => {
-            this.closeCart();
+            this.closeCart(); // Usar el método público que maneja historial
         }, 1500);
     }
 
@@ -181,8 +205,9 @@ class TiendaApp {
             modalAddToCartBtn.addEventListener('click', () => {
                 // Si el botón está en estado "Ver Carrito", abrir el carrito
                 if (modalAddToCartBtn.classList.contains('view-cart-state')) {
-                    this.closeProductModal();
-                    this.openCart();
+                    this.closeProductModal(); // Cierra producto (history.back)
+                    // Esperar un poco para abrir el carrito para que no colisionen las animaciones/historial
+                    setTimeout(() => this.openCart(), 50);
                     return;
                 }
 
@@ -232,13 +257,13 @@ class TiendaApp {
 
         if (filterToggleBtn) {
             filterToggleBtn.addEventListener('click', () => {
-                sidebar.classList.add('active');
+                this.openSidebar();
             });
         }
 
         if (closeSidebarBtn) {
             closeSidebarBtn.addEventListener('click', () => {
-                sidebar.classList.remove('active');
+                this.closeSidebar();
             });
         }
 
@@ -248,7 +273,7 @@ class TiendaApp {
                 sidebar.classList.contains('active') &&
                 !sidebar.contains(e.target) &&
                 !filterToggleBtn.contains(e.target)) {
-                sidebar.classList.remove('active');
+                this.closeSidebar();
             }
         });
 
@@ -363,20 +388,65 @@ class TiendaApp {
         this.renderer.showAddToCartFeedback(button);
     }
 
+    // --- MÉTODOS PÚBLICOS (Con Historial) ---
+
     openCart() {
+        history.pushState({ modal: 'cart' }, '', '');
+        this._showCart();
+    }
+
+    closeCart() {
+        // Si hay historial y es nuestro modal, volvemos atrás
+        if (history.state && history.state.modal === 'cart') {
+            history.back();
+        } else {
+            // Fallback por si acaso (ej: recarga de página con modal abierto, aunque init lo cierra)
+            this._hideCart();
+        }
+    }
+
+    openProductModal(productId) {
+        history.pushState({ modal: 'product', productId: productId }, '', '');
+        this._showProductModal(productId);
+    }
+
+    closeProductModal() {
+        if (history.state && history.state.modal === 'product') {
+            history.back();
+        } else {
+            this._hideProductModal();
+        }
+    }
+
+    openSidebar() {
+        history.pushState({ modal: 'sidebar' }, '', '');
+        this._showSidebar();
+    }
+
+    closeSidebar() {
+        if (history.state && history.state.modal === 'sidebar') {
+            history.back();
+        } else {
+            this._hideSidebar();
+        }
+    }
+
+    // --- MÉTODOS PRIVADOS (Solo UI) ---
+
+    _showCart() {
         const cartModal = document.getElementById('cartModal');
         cartModal.style.display = 'block';
         this.renderer.renderCart();
         document.body.style.overflow = 'hidden';
     }
 
-    closeCart() {
+    _hideCart() {
         const cartModal = document.getElementById('cartModal');
         cartModal.style.display = 'none';
         document.body.style.overflow = 'auto';
     }
 
-    openProductModal(productId) {
+    _showProductModal(productId) {
         const product = this.state.allProducts.find(p => p.id === productId);
         if (!product) return;
 
@@ -422,11 +492,21 @@ class TiendaApp {
         document.body.style.overflow = 'hidden';
     }
 
-    closeProductModal() {
+    _hideProductModal() {
         const modal = document.getElementById('productModal');
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
         this.currentProductId = null;
+    }
+
+    _showSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.add('active');
+    }
+
+    _hideSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.remove('active');
     }
 
     navigateModalCarousel(direction) {
