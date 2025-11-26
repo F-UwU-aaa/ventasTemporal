@@ -583,8 +583,10 @@
         font-weight: 700;
         color: var(--text-main);
         margin-right: 6px;
-        background: none;
-        -webkit-text-fill-color: initial;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .cart-content {

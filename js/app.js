@@ -14,6 +14,7 @@ class TiendaApp {
     async init() {
         this.renderer.renderSkeletons();
         this.setupHistoryHandling(); // Configurar manejo de historial
+        this.setupCarouselTouchHandling(); // Configurar gestos táctiles
         try {
             await this.loadProductsFromJSON();
             this.setupEventListeners();
@@ -47,6 +48,33 @@ class TiendaApp {
                 }
             }
         });
+    }
+
+    // AGREGADO: Soporte para Swipe en Carrusel
+    setupCarouselTouchHandling() {
+        const carousel = document.getElementById('modalCarousel');
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            this.handleSwipeGesture(touchStartX, touchEndX);
+        }, { passive: true });
+    }
+
+    handleSwipeGesture(startX, endX) {
+        const threshold = 50; // Mínimo desplazamiento para considerar swipe
+        if (startX - endX > threshold) {
+            // Deslizó a la izquierda -> Siguiente
+            this.navigateModalCarousel(1);
+        } else if (endX - startX > threshold) {
+            // Deslizó a la derecha -> Anterior
+            this.navigateModalCarousel(-1);
+        }
     }
 
     async loadProductsFromJSON() {
