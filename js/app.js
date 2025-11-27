@@ -412,10 +412,10 @@ class TiendaApp {
                 e.preventDefault();
                 if (e.deltaY < 0) {
                     // Scroll arriba = Acercar
-                    this.zoomLevel(0.3);
+                    this.zoomLevel(0.05);
                 } else {
                     // Scroll abajo = Alejar
-                    this.zoomLevel(-0.3);
+                    this.zoomLevel(-0.05);
                 }
             }, { passive: false });
 
@@ -491,10 +491,10 @@ class TiendaApp {
                     const scale = distance / (this.lastTouchDistance || distance);
                     
                     if (scale > 1.05) {
-                        this.zoomLevel(0.3);
+                        this.zoomLevel(0.05);
                         this.lastTouchDistance = distance;
                     } else if (scale < 0.95) {
-                        this.zoomLevel(-0.3);
+                        this.zoomLevel(-0.05);
                         this.lastTouchDistance = distance;
                     }
                 }
@@ -682,7 +682,7 @@ class TiendaApp {
         // Resetear botón de agregar al carrito
         const addToCartBtn = document.getElementById('modalAddToCart');
         if (addToCartBtn) {
-            addToCartBtn.innerHTML = 'Agregar al Carrito';
+            addToCartBtn.innerHTML = 'Comprar Ahora';
             addToCartBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             addToCartBtn.classList.remove('view-cart-state');
         }
