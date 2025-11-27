@@ -61,16 +61,11 @@ class Renderer {
         const div = document.createElement('div');
         div.className = 'product-card';
         div.dataset.id = product.id;
-        
-        // 🆕 SEO: Alt text descriptivo para imágenes
-        const altText = `${product.title} - Comprar en TuCasse | Tienda Online Bolivia`;
-        
         // Solo imagen principal, sin carrusel ni controles
         const imageHTML = `
             <div class="product-image">
                 <img data-src="${product.mainImage}"
-                     alt="${altText}"
-                     title="${product.title}"
+                     alt="${product.title}"
                      data-loading="true"
                      style="opacity: 0;">
             </div>

@@ -9,6 +9,29 @@ class TiendaApp {
         this.isInitialized = false;
         this.productModalIndex = 0;
         this.productModalImages = [];
+        
+        // ===== ZOOM Y PAN VARIABLES =====
+        this.zoomScale = 1;
+        this.minZoom = 1;
+        this.maxZoom = 4;
+        
+        // Pan (desplazamiento)
+        this.panX = 0;
+        this.panY = 0;
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.lastPanX = 0;
+        this.lastPanY = 0;
+        
+        // Dimensiones de imagen para cálculo de límites
+        this.imgWidth = 0;
+        this.imgHeight = 0;
+        this.containerWidth = 0;
+        this.containerHeight = 0;
+        
+        // Animación de bounce back
+        this.isAnimating = false;
     }
 
     async init() {
@@ -322,6 +345,184 @@ class TiendaApp {
                 this.navigateModalCarousel(1);
             });
         }
+
+        // ===== ZOOM IMAGE VIEWERS =====
+        const modalMainImage = document.getElementById('modalMainImage');
+        const imageZoom = document.getElementById('imageZoom');
+        const imageZoomImg = document.getElementById('imageZoomImg');
+        const imageZoomWrapper = imageZoomImg?.parentElement;
+        const imageZoomClose = document.getElementById('imageZoomClose');
+        const imageZoomIn = document.getElementById('imageZoomIn');
+        const imageZoomOut = document.getElementById('imageZoomOut');
+        const imageZoomReset = document.getElementById('imageZoomReset');
+
+        // Abrir visor de zoom
+        if (modalMainImage) {
+            modalMainImage.addEventListener('click', () => {
+                imageZoomImg.src = modalMainImage.src;
+                imageZoom.classList.add('show');
+                this.resetZoomState();
+                this.updateZoom();
+                
+                // Calcular dimensiones de la imagen después de cargar
+                setTimeout(() => {
+                    this.calculateImageDimensions();
+                }, 100);
+            });
+        }
+
+        // Cerrar zoom
+        if (imageZoomClose) {
+            imageZoomClose.addEventListener('click', () => {
+                this.closeZoomViewer(imageZoom);
+            });
+        }
+
+        if (imageZoom) {
+            imageZoom.addEventListener('click', (e) => {
+                if (e.target === imageZoom || e.target === imageZoomWrapper) {
+                    this.closeZoomViewer(imageZoom);
+                }
+            });
+        }
+
+        // Botones de zoom
+        if (imageZoomIn) {
+            imageZoomIn.addEventListener('click', () => {
+                this.zoomLevel(0.5);
+            });
+        }
+
+        if (imageZoomOut) {
+            imageZoomOut.addEventListener('click', () => {
+                this.zoomLevel(-0.5);
+            });
+        }
+
+        if (imageZoomReset) {
+            imageZoomReset.addEventListener('click', () => {
+                this.resetZoomState();
+                this.updateZoom();
+            });
+        }
+
+        // Rueda del ratón - Zoom
+        if (imageZoomImg) {
+            imageZoomImg.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    // Scroll arriba = Acercar
+                    this.zoomLevel(0.3);
+                } else {
+                    // Scroll abajo = Alejar
+                    this.zoomLevel(-0.3);
+                }
+            }, { passive: false });
+
+            // ===== PREVENIR ARRASTRES NATIVOS DE LA IMAGEN =====
+            imageZoomImg.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            imageZoomImg.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            // ===== MOUSE DRAG =====
+            imageZoomImg.addEventListener('mousedown', (e) => {
+                // CRÍTICO: Prevenir comportamiento por defecto del navegador
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (this.zoomScale > this.minZoom) {
+                    this.startDrag(e.clientX, e.clientY, imageZoomWrapper);
+                }
+                return false;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (this.isDragging) {
+                    e.preventDefault();
+                    this.performDrag(e.clientX, e.clientY);
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (this.isDragging) {
+                    e.preventDefault();
+                    this.endDrag(imageZoomImg);
+                }
+            });
+
+            // ===== PREVENIR DROP EN EL CONTENEDOR =====
+            const imageZoomContainer = imageZoomImg.closest('.image-zoom');
+            if (imageZoomContainer) {
+                imageZoomContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    return false;
+                });
+
+                imageZoomContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+
+            // ===== TOUCH SUPPORT =====
+            imageZoomImg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1 && this.zoomScale > this.minZoom) {
+                    // Un dedo - arrastrar
+                    this.startDrag(e.touches[0].clientX, e.touches[0].clientY, imageZoomWrapper);
+                } else if (e.touches.length === 2) {
+                    // Dos dedos - pinch zoom
+                    this.lastTouchDistance = this.getDistance(e.touches[0], e.touches[1]);
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', (e) => {
+                if (this.isDragging && e.touches.length === 1) {
+                    e.preventDefault();
+                    this.performDrag(e.touches[0].clientX, e.touches[0].clientY);
+                } else if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const distance = this.getDistance(e.touches[0], e.touches[1]);
+                    const scale = distance / (this.lastTouchDistance || distance);
+                    
+                    if (scale > 1.05) {
+                        this.zoomLevel(0.3);
+                        this.lastTouchDistance = distance;
+                    } else if (scale < 0.95) {
+                        this.zoomLevel(-0.3);
+                        this.lastTouchDistance = distance;
+                    }
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', () => {
+                if (this.isDragging) {
+                    this.endDrag(imageZoomImg);
+                }
+                this.lastTouchDistance = 0;
+            });
+        }
+
+        // ===== KEYBOARD SHORTCUTS =====
+        document.addEventListener('keydown', (e) => {
+            if (imageZoom?.classList.contains('show')) {
+                if (e.key === 'Escape') {
+                    this.closeZoomViewer(imageZoom);
+                } else if (e.key === '+' || e.key === '=') {
+                    this.zoomLevel(0.5);
+                } else if (e.key === '-') {
+                    this.zoomLevel(-0.5);
+                } else if (e.key === '0') {
+                    this.resetZoomState();
+                    this.updateZoom();
+                }
+            }
+        });
     }
 
     setupPriceRange() {
@@ -478,9 +679,6 @@ class TiendaApp {
         const product = this.state.allProducts.find(p => p.id === productId);
         if (!product) return;
 
-        // 🆕 SEO: Actualizar meta tags dinámicamente
-        this.updateProductMetaTags(product);
-
         // Resetear botón de agregar al carrito
         const addToCartBtn = document.getElementById('modalAddToCart');
         if (addToCartBtn) {
@@ -632,49 +830,273 @@ class TiendaApp {
         document.querySelector('.products-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 🆕 SEO: Actualizar meta tags dinámicamente para productos
-    updateProductMetaTags(product) {
-        // Limitar descripción a 160 caracteres
-        const description = product.description.substring(0, 160).replace(/\s+$/, '') + '...';
-        
-        // Actualizar title
-        document.title = `${product.title} - TuCasse`;
-        
-        // Actualizar o crear meta description
-        let metaDescription = document.querySelector('meta[name="description"]');
-        if (!metaDescription) {
-            metaDescription = document.createElement('meta');
-            metaDescription.name = 'description';
-            document.head.appendChild(metaDescription);
+    updateZoom() {
+        const imageZoomImg = document.getElementById('imageZoomImg');
+        const imageZoomLevel = document.getElementById('imageZoomLevel');
+        const imageZoomWrapper = imageZoomImg?.parentElement;
+
+        if (imageZoomImg) {
+            // Aplicar transformación: escala + desplazamiento
+            imageZoomImg.style.transform = `scale(${this.zoomScale}) translate(${this.panX / this.zoomScale}px, ${this.panY / this.zoomScale}px)`;
         }
-        metaDescription.content = description;
-        
-        // Actualizar Open Graph para compartir
-        this.updateOpenGraphTags(product);
-        
-        // Inyectar schema.org del producto
-        if (typeof SEO_CONFIG !== 'undefined') {
-            SEO_CONFIG.injectSchema(SEO_CONFIG.generateProductSchema(product));
+
+        if (imageZoomLevel) {
+            imageZoomLevel.textContent = Math.round(this.zoomScale * 100) + '%';
+        }
+
+        // Actualizar clase de cursor basado en zoom
+        if (imageZoomWrapper) {
+            if (this.zoomScale > 1) {
+                imageZoomWrapper.classList.remove('no-drag');
+            } else {
+                imageZoomWrapper.classList.add('no-drag');
+            }
         }
     }
 
-    // 🆕 Actualizar tags Open Graph
-    updateOpenGraphTags(product) {
-        this.updateOrCreateMetaTag('og:title', product.title + ' - TuCasse');
-        this.updateOrCreateMetaTag('og:description', product.description.substring(0, 160));
-        this.updateOrCreateMetaTag('og:image', product.mainImage);
-        this.updateOrCreateMetaTag('og:type', 'product');
+    // ===== MÉTODOS DE ZOOM =====
+
+    /**
+     * Ajusta el nivel de zoom
+     * @param {number} delta - Cantidad a sumar/restar al zoom (positivo = acercar, negativo = alejar)
+     */
+    zoomLevel(delta) {
+        const newZoom = this.zoomScale + delta;
+        this.zoomScale = Math.max(this.minZoom, Math.min(newZoom, this.maxZoom));
+        this.constrainPan(); // Limitar pan después de cambiar zoom
+        this.updateZoom();
     }
 
-    // 🆕 Utilidad para actualizar o crear meta tags
-    updateOrCreateMetaTag(property, content) {
-        let tag = document.querySelector(`meta[property="${property}"]`);
-        if (!tag) {
-            tag = document.createElement('meta');
-            tag.setAttribute('property', property);
-            document.head.appendChild(tag);
+    /**
+     * Reinicia zoom y pan al estado inicial
+     */
+    resetZoomState() {
+        this.zoomScale = 1;
+        this.panX = 0;
+        this.panY = 0;
+        this.isDragging = false;
+        this.isAnimating = false;
+    }
+
+    /**
+     * Cierra el visor de zoom
+     */
+    closeZoomViewer(imageZoom) {
+        imageZoom.classList.remove('show');
+        this.resetZoomState();
+        this.updateZoom();
+    }
+
+    // ===== MÉTODOS DE ARRASTRE (PAN) =====
+
+    /**
+     * Calcula dimensiones de la imagen para cálculos de límites
+     */
+    calculateImageDimensions() {
+        const imageZoomImg = document.getElementById('imageZoomImg');
+        const imageZoomWrapper = imageZoomImg?.parentElement;
+
+        if (imageZoomImg && imageZoomWrapper) {
+            // Obtener dimensiones reales de la imagen
+            this.imgWidth = imageZoomImg.offsetWidth;
+            this.imgHeight = imageZoomImg.offsetHeight;
+            this.containerWidth = imageZoomWrapper.offsetWidth;
+            this.containerHeight = imageZoomWrapper.offsetHeight;
         }
-        tag.content = content;
+    }
+
+    /**
+     * Inicia el arrastre de la imagen
+     */
+    startDrag(clientX, clientY, wrapper) {
+        if (this.isAnimating) return;
+
+        this.isDragging = true;
+        this.dragStartX = clientX;
+        this.dragStartY = clientY;
+        this.lastPanX = this.panX;
+        this.lastPanY = this.panY;
+
+        const imageZoomImg = document.getElementById('imageZoomImg');
+        if (imageZoomImg) {
+            imageZoomImg.classList.add('dragging');
+        }
+        if (wrapper) {
+            wrapper.classList.add('dragging');
+        }
+    }
+
+    /**
+     * Realiza el arrastre en tiempo real
+     */
+    performDrag(clientX, clientY) {
+        if (!this.isDragging || this.zoomScale <= 1) return;
+
+        // Calcular delta desde el inicio del arrastre
+        const deltaX = clientX - this.dragStartX;
+        const deltaY = clientY - this.dragStartY;
+
+        // Aplicar movimiento
+        this.panX = this.lastPanX + deltaX;
+        this.panY = this.lastPanY + deltaY;
+
+        // Limitar el pan dentro de los límites calculados
+        this.constrainPan();
+
+        // Actualizar imagen sin transición (inmediato)
+        this.updateZoomImmediate();
+    }
+
+    /**
+     * Finaliza el arrastre
+     */
+    endDrag(imageZoomImg) {
+        this.isDragging = false;
+
+        if (imageZoomImg) {
+            imageZoomImg.classList.remove('dragging');
+        }
+
+        // Verificar si está fuera de límites y hacer bounce back
+        if (this.isPanOutOfBounds()) {
+            this.animateBounceBack();
+        }
+    }
+
+    /**
+     * Limita el pan a los límites permitidos
+     * Calcula correctamente basándose en: tamaño imagen ampliada vs contenedor
+     * FÓRMULA:
+     * - Obtener tamaño de imagen con zoom aplicado
+     * - Obtener tamaño del contenedor
+     * - Calcular cuánto sobresale = (imagen_ampliada - contenedor) / 2
+     * - Límite final = sobresale + buffer (15% del contenedor)
+     */
+    constrainPan() {
+        if (this.zoomScale <= 1) {
+            this.panX = 0;
+            this.panY = 0;
+            return;
+        }
+
+        // ===== CÁLCULO CORRECTO DE LÍMITES =====
+        
+        // Tamaño de la imagen CON zoom aplicado
+        const scaledImgWidth = this.imgWidth * this.zoomScale;
+        const scaledImgHeight = this.imgHeight * this.zoomScale;
+
+        // Cuánto sobresale la imagen ampliada del contenedor (por lado)
+        const overflowX = Math.max(0, (scaledImgWidth - this.containerWidth) / 2);
+        const overflowY = Math.max(0, (scaledImgHeight - this.containerHeight) / 2);
+
+        // Buffer adicional: permitir que se salga un 15% extra del contenedor
+        const bufferX = this.containerWidth * 0.15;
+        const bufferY = this.containerHeight * 0.15;
+
+        // Límites finales: cuánto podemos mover la imagen
+        const maxPanX = overflowX + bufferX;
+        const maxPanY = overflowY + bufferY;
+
+        // Aplicar límites simétricos (negativo y positivo)
+        this.panX = Math.max(-maxPanX, Math.min(this.panX, maxPanX));
+        this.panY = Math.max(-maxPanY, Math.min(this.panY, maxPanY));
+    }
+
+    /**
+     * Verifica si el pan está fuera de los límites permitidos
+     * Usa la misma lógica de cálculo que constrainPan
+     */
+    isPanOutOfBounds() {
+        if (this.zoomScale <= 1) return false;
+
+        // Usar la misma fórmula que en constrainPan
+        const scaledImgWidth = this.imgWidth * this.zoomScale;
+        const scaledImgHeight = this.imgHeight * this.zoomScale;
+        
+        const overflowX = Math.max(0, (scaledImgWidth - this.containerWidth) / 2);
+        const overflowY = Math.max(0, (scaledImgHeight - this.containerHeight) / 2);
+        
+        const bufferX = this.containerWidth * 0.15;
+        const bufferY = this.containerHeight * 0.15;
+        
+        const maxPanX = overflowX + bufferX;
+        const maxPanY = overflowY + bufferY;
+
+        return Math.abs(this.panX) > maxPanX || Math.abs(this.panY) > maxPanY;
+    }
+
+    /**
+     * Anima el regreso a los límites permitidos (bounce back)
+     * Si se arrastra fuera de los límites, vuelve suavemente
+     */
+    animateBounceBack() {
+        this.isAnimating = true;
+        const startPanX = this.panX;
+        const startPanY = this.panY;
+
+        // Calcular límites correctos usando la misma fórmula
+        const scaledImgWidth = this.imgWidth * this.zoomScale;
+        const scaledImgHeight = this.imgHeight * this.zoomScale;
+        
+        const overflowX = Math.max(0, (scaledImgWidth - this.containerWidth) / 2);
+        const overflowY = Math.max(0, (scaledImgHeight - this.containerHeight) / 2);
+        
+        const bufferX = this.containerWidth * 0.15;
+        const bufferY = this.containerHeight * 0.15;
+        
+        const maxPanX = overflowX + bufferX;
+        const maxPanY = overflowY + bufferY;
+
+        // Constrain a los límites permitidos
+        const endPanX = Math.max(-maxPanX, Math.min(this.panX, maxPanX));
+        const endPanY = Math.max(-maxPanY, Math.min(this.panY, maxPanY));
+
+        const duration = 400; // ms
+        const startTime = Date.now();
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing: ease-out-cubic para animación suave
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+            this.panX = startPanX + (endPanX - startPanX) * easeProgress;
+            this.panY = startPanY + (endPanY - startPanY) * easeProgress;
+
+            this.updateZoomImmediate();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.isAnimating = false;
+                this.panX = endPanX;
+                this.panY = endPanY;
+                this.updateZoom();
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    /**
+     * Actualiza la imagen inmediatamente sin transición (para arrastre fluido)
+     */
+    updateZoomImmediate() {
+        const imageZoomImg = document.getElementById('imageZoomImg');
+
+        if (imageZoomImg) {
+            imageZoomImg.style.transform = `scale(${this.zoomScale}) translate(${this.panX / this.zoomScale}px, ${this.panY / this.zoomScale}px)`;
+        }
+    }
+
+    /**
+     * Calcula distancia entre dos puntos de toque (para pinch zoom)
+     */
+    getDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }
 
