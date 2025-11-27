@@ -1,0 +1,31 @@
+# Archivo robots.txt para TuCasse
+# Permite a todos los buscadores rastrear el sitio
+
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /css/
+Allow: /js/
+Allow: /data/
+Allow: /Imagenes_Marca/
+Allow: /imagenes_descargadas/
+
+Disallow: /admin/
+Disallow: /private/
+Disallow: /*.json$
+
+# Optimización para Google
+User-agent: Googlebot
+Allow: /
+
+# Optimización para Bing
+User-agent: Bingbot
+Allow: /
+
+# Crawl delay para otros bots
+User-agent: *
+Crawl-delay: 1
+Request-rate: 1/10
+
+# Sitemap
+Sitemap: https://tucasse.com/sitemap.xml

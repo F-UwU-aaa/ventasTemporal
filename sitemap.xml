@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+    
+    <!-- Página principal -->
+    <url>
+        <loc>https://tucasse.com/</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- Sección de productos -->
+    <url>
+        <loc>https://tucasse.com/productos</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- Página de carrito -->
+    <url>
+        <loc>https://tucasse.com/carrito</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <!-- Página de contacto -->
+    <url>
+        <loc>https://tucasse.com/contacto</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <!-- Página de términos -->
+    <url>
+        <loc>https://tucasse.com/terminos</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- Página de política de privacidad -->
+    <url>
+        <loc>https://tucasse.com/privacidad</loc>
+        <lastmod>2025-11-26</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+</urlset>

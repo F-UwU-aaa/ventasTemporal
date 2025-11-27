@@ -1,4 +1,5 @@
 @import 'variables.css';
+
 @import 'base.css';
 @import 'header.css';
 @import 'sidebar.css';
@@ -6,4 +7,5 @@
 @import 'cart.css';
 @import 'modal.css';
 @import 'toast.css';
+@import 'footer.css';
 @import 'responsive.css';

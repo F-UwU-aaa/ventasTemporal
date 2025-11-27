@@ -478,6 +478,9 @@ class TiendaApp {
         const product = this.state.allProducts.find(p => p.id === productId);
         if (!product) return;
 
+        // 🆕 SEO: Actualizar meta tags dinámicamente
+        this.updateProductMetaTags(product);
+
         // Resetear botón de agregar al carrito
         const addToCartBtn = document.getElementById('modalAddToCart');
         if (addToCartBtn) {
@@ -627,6 +630,51 @@ class TiendaApp {
         this.renderer.renderProducts();
         // Scroll al inicio de la lista de productos
         document.querySelector('.products-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 🆕 SEO: Actualizar meta tags dinámicamente para productos
+    updateProductMetaTags(product) {
+        // Limitar descripción a 160 caracteres
+        const description = product.description.substring(0, 160).replace(/\s+$/, '') + '...';
+        
+        // Actualizar title
+        document.title = `${product.title} - TuCasse`;
+        
+        // Actualizar o crear meta description
+        let metaDescription = document.querySelector('meta[name="description"]');
+        if (!metaDescription) {
+            metaDescription = document.createElement('meta');
+            metaDescription.name = 'description';
+            document.head.appendChild(metaDescription);
+        }
+        metaDescription.content = description;
+        
+        // Actualizar Open Graph para compartir
+        this.updateOpenGraphTags(product);
+        
+        // Inyectar schema.org del producto
+        if (typeof SEO_CONFIG !== 'undefined') {
+            SEO_CONFIG.injectSchema(SEO_CONFIG.generateProductSchema(product));
+        }
+    }
+
+    // 🆕 Actualizar tags Open Graph
+    updateOpenGraphTags(product) {
+        this.updateOrCreateMetaTag('og:title', product.title + ' - TuCasse');
+        this.updateOrCreateMetaTag('og:description', product.description.substring(0, 160));
+        this.updateOrCreateMetaTag('og:image', product.mainImage);
+        this.updateOrCreateMetaTag('og:type', 'product');
+    }
+
+    // 🆕 Utilidad para actualizar o crear meta tags
+    updateOrCreateMetaTag(property, content) {
+        let tag = document.querySelector(`meta[property="${property}"]`);
+        if (!tag) {
+            tag = document.createElement('meta');
+            tag.setAttribute('property', property);
+            document.head.appendChild(tag);
+        }
+        tag.content = content;
     }
 }
 

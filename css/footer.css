@@ -1,0 +1,147 @@
+/* Footer Styles */
+.footer {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 4rem 0 2rem;
+    margin-top: 4rem;
+    border-top: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 3rem;
+}
+
+.footer-section h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.footer-section h3::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 3px;
+    background: var(--primary-gradient);
+    border-radius: 2px;
+}
+
+.footer-section p {
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-links li {
+    margin-bottom: 0.8rem;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.3s ease, transform 0.2s ease;
+    display: inline-block;
+}
+
+.footer-links a:hover {
+    color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+.social-links {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.social-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* WhatsApp siempre con su color */
+.social-icon.whatsapp {
+    background-color: #25D366;
+    color: white;
+}
+
+.social-icon.whatsapp:hover {
+    background-color: #25D366;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+}
+
+/* TikTok siempre con su color */
+.social-icon.tiktok {
+    background-color: #000000;
+    color: white;
+}
+
+.social-icon.tiktok:hover {
+    background-color: #000000;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .social-icon.tiktok {
+    background-color: #ffffff;
+    color: black;
+}
+
+[data-theme="dark"] .social-icon.tiktok:hover {
+    background-color: #ffffff;
+    color: black;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.4);
+}
+
+.footer-bottom {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .footer {
+        padding: 3rem 0 1.5rem;
+    }
+
+    .footer-content {
+        gap: 2rem;
+    }
+}
